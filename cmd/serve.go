@@ -20,7 +20,9 @@ import (
 	"os"
 
 	"github.com/heynemann/hyper-cas/serve"
+	"github.com/heynemann/hyper-cas/storage"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var servePort int
@@ -32,7 +34,12 @@ var serveCmd = &cobra.Command{
 	Long: `hyper-cas serve handles all requests to store either data or
 distributions.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		app, err := serve.NewApp(servePort)
+		storageType := storage.Memory
+		if viper.GetString("storage.type") == "file" {
+			storageType = storage.FileSystem
+		}
+		serveRootPath := viper.GetString("storage.rootPath")
+		app, err := serve.NewApp(servePort, serveRootPath, storageType)
 		if err != nil {
 			fmt.Printf("Starting hyper-cas storage API failed with: %v", err)
 			os.Exit(1)

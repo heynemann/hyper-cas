@@ -23,10 +23,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
 
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/spf13/cobra"
+
 	"github.com/spf13/viper"
 )
 
@@ -62,20 +62,13 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	viper.SetConfigType("yaml")
+
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		// Search config in home directory with name ".hyper-cas" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".hyper-cas")
+		viper.SetConfigName("hyper-cas.yaml")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match

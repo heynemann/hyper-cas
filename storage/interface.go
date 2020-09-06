@@ -1,6 +1,13 @@
 package storage
 
+type StorageType int
+
+const (
+	Memory StorageType = iota
+	FileSystem
+)
+
 type Storage interface {
-	Store(value string) (string, error)
-	Get(hash string) (string, error)
+	Store(value []byte) (string, error)
+	Get(hash string) ([]byte, error)
 }

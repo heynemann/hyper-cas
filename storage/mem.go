@@ -3,34 +3,33 @@ package storage
 import (
 	"crypto/sha1"
 	"fmt"
-	"io"
 	"sync"
 )
 
 type MemStorage struct {
 	sync.RWMutex
-	storage map[string]string
+	storage map[string][]byte
 }
 
 func NewMemStorage() (*MemStorage, error) {
-	return &MemStorage{storage: map[string]string{}}, nil
+	return &MemStorage{storage: map[string][]byte{}}, nil
 }
 
-func (st *MemStorage) Store(value string) (string, error) {
+func (st *MemStorage) Store(value []byte) (string, error) {
 	h := sha1.New()
-	io.WriteString(h, value)
-	hash := fmt.Sprintf("%x", h.Sum(nil))
+	h.Write(value)
+	hash := h.Sum(nil)
 	st.Lock()
 	defer st.Unlock()
-	st.storage[hash] = value
-	return hash, nil
+	st.storage[string(hash)] = value
+	return string(hash), nil
 }
 
-func (st *MemStorage) Get(hash string) (string, error) {
+func (st *MemStorage) Get(hash string) ([]byte, error) {
 	st.RLock()
 	defer st.RUnlock()
 	if val, ok := st.storage[hash]; ok {
 		return val, nil
 	}
-	return "", fmt.Errorf("Hash %s was not found in storage.", hash)
+	return nil, fmt.Errorf("Hash %s was not found in storage.", hash)
 }

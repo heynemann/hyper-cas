@@ -15,12 +15,12 @@ func NewFileHandler(app *App) *FileHandler {
 }
 
 func (handler *FileHandler) handlePut(ctx *routing.Context) error {
-	value := string(ctx.Request.Body())
-	hash, err := handler.App.Storage.Store(string(value))
+	value := ctx.Request.Body()
+	hash, err := handler.App.Storage.Store(value)
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(ctx, hash)
+	fmt.Fprintf(ctx, "%s", hash)
 	return nil
 }
 
@@ -30,6 +30,6 @@ func (handler *FileHandler) handleGet(ctx *routing.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(ctx, contents)
+	ctx.SetBody(contents)
 	return nil
 }

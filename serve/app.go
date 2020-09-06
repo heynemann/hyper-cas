@@ -14,8 +14,19 @@ type App struct {
 	Storage storage.Storage
 }
 
-func NewApp(port int) (*App, error) {
-	storage, err := storage.NewMemStorage()
+func getStorage(storageType storage.StorageType, rootPath string) (storage.Storage, error) {
+	switch storageType {
+	case storage.Memory:
+		return storage.NewMemStorage()
+	case storage.FileSystem:
+		return storage.NewFSStorage(rootPath)
+	}
+
+	return nil, fmt.Errorf("No storage could be found for storage type %v", storageType)
+}
+
+func NewApp(port int, rootPath string, storageType storage.StorageType) (*App, error) {
+	storage, err := getStorage(storageType, rootPath)
 	if err != nil {
 		return nil, err
 	}

@@ -1,0 +1,3 @@
+storage:
+  type: file
+  rootPath: /tmp/hyper-cas/storage
