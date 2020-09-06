@@ -16,6 +16,9 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/heynemann/hyper-cas/serve"
 	"github.com/spf13/cobra"
 )
@@ -29,7 +32,11 @@ var serveCmd = &cobra.Command{
 	Long: `hyper-cas serve handles all requests to store either data or
 distributions.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		app := serve.App{Port: servePort}
+		app, err := serve.NewApp(servePort)
+		if err != nil {
+			fmt.Printf("Starting hyper-cas storage API failed with: %v", err)
+			os.Exit(1)
+		}
 		app.ListenAndServe()
 	},
 }
