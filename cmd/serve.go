@@ -16,8 +16,7 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/heynemann/hyper-cas/serve"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +29,8 @@ var serveCmd = &cobra.Command{
 	Long: `hyper-cas serve handles all requests to store either data or
 distributions.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("serve called")
+		app := serve.App{Port: servePort}
+		app.ListenAndServe()
 	},
 }
 
