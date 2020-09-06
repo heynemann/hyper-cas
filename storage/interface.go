@@ -8,6 +8,6 @@ const (
 )
 
 type Storage interface {
-	Store(value []byte) (string, error)
+	Store(key string, value []byte) error
 	Get(hash string) ([]byte, error)
 }

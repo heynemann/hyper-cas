@@ -1,3 +1,5 @@
 storage:
   type: file
   rootPath: /tmp/hyper-cas/storage
+cache:
+  maxSizeBytes: 104857600 # 100mb

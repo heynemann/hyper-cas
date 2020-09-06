@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"crypto/sha1"
 	"fmt"
 	"sync"
 )
@@ -15,14 +14,11 @@ func NewMemStorage() (*MemStorage, error) {
 	return &MemStorage{storage: map[string][]byte{}}, nil
 }
 
-func (st *MemStorage) Store(value []byte) (string, error) {
-	h := sha1.New()
-	h.Write(value)
-	hash := h.Sum(nil)
+func (st *MemStorage) Store(hash string, value []byte) error {
 	st.Lock()
 	defer st.Unlock()
-	st.storage[string(hash)] = value
-	return string(hash), nil
+	st.storage[hash] = value
+	return nil
 }
 
 func (st *MemStorage) Get(hash string) ([]byte, error) {

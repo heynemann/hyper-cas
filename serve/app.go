@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/heynemann/hyper-cas/cache"
+	"github.com/heynemann/hyper-cas/hash"
 	"github.com/heynemann/hyper-cas/storage"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
@@ -11,26 +13,56 @@ import (
 
 type App struct {
 	Port    int
+	Hasher  hash.Hasher
 	Storage storage.Storage
+	Cache   cache.Cache
 }
 
-func getStorage(storageType storage.StorageType, rootPath string) (storage.Storage, error) {
+func getStorage(storageType storage.StorageType) (storage.Storage, error) {
 	switch storageType {
 	case storage.Memory:
 		return storage.NewMemStorage()
 	case storage.FileSystem:
-		return storage.NewFSStorage(rootPath)
+		return storage.NewFSStorage()
 	}
 
 	return nil, fmt.Errorf("No storage could be found for storage type %v", storageType)
 }
 
-func NewApp(port int, rootPath string, storageType storage.StorageType) (*App, error) {
-	storage, err := getStorage(storageType, rootPath)
+func getCache(cacheType cache.CacheType) (cache.Cache, error) {
+	switch cacheType {
+	case cache.LRU:
+		return cache.NewLRUCache()
+	}
+
+	return nil, fmt.Errorf("No cache could be found for cache type %v", cacheType)
+}
+
+func getHasher(hasherType hash.HasherType) (hash.Hasher, error) {
+	switch hasherType {
+	case hash.SHA1:
+		return hash.NewSHA1Hasher()
+	}
+
+	return nil, fmt.Errorf("No cache could be found for cache type %v", hasherType)
+}
+
+func NewApp(port int, hasherType hash.HasherType, storageType storage.StorageType, cacheType cache.CacheType) (*App, error) {
+	hasher, err := getHasher(hasherType)
 	if err != nil {
 		return nil, err
 	}
-	return &App{Port: port, Storage: storage}, nil
+
+	storage, err := getStorage(storageType)
+	if err != nil {
+		return nil, err
+	}
+
+	cache, err := getCache(cacheType)
+	if err != nil {
+		return nil, err
+	}
+	return &App{Port: port, Hasher: hasher, Storage: storage, Cache: cache}, nil
 }
 
 func (app *App) ListenAndServe() {
