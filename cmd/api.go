@@ -16,8 +16,6 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -25,25 +23,15 @@ import (
 var apiCmd = &cobra.Command{
 	Use:   "api",
 	Short: "hyper-cas API for both storage and router",
-    Long: `This command is divided in two parts:
+	Long: `This command is divided in two parts:
 * serve - runs the API used by hyper-cas to handle storing data and distributions
 * route - runs the Router that handles requests for data in a distribution
 `,
 	// Run: func(cmd *cobra.Command, args []string) {
-		// fmt.Println("api called")
+	// fmt.Println("api called")
 	// },
 }
 
 func init() {
 	rootCmd.AddCommand(apiCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// apiCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// apiCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
