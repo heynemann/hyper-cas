@@ -6,15 +6,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// func TestParsingEmptyDistro(t *testing.T) {
-// data := `labelName`
+func TestParsingEmptyDistro(t *testing.T) {
+	data := `labelName`
 
-// distro, err := ParseDistro(data)
+	distro, err := ParseDistro(data)
 
-// assert.Nil(t, err)
-// assert.NotNil(t, distro)
-// assert.Equal(t, distro.Label, "labelName")
-// }
+	assert.Nil(t, err)
+	assert.NotNil(t, distro)
+	assert.Equal(t, distro.Label, "labelName")
+}
 
 func TestParsingDistroWithPaths(t *testing.T) {
 	data := `labelName
