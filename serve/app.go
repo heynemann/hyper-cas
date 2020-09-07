@@ -68,8 +68,10 @@ func NewApp(port int, hasherType hash.HasherType, storageType storage.StorageTyp
 func (app *App) ListenAndServe() {
 	router := routing.New()
 	fileHandler := NewFileHandler(app)
-	router.Put("/", fileHandler.handlePut)
-	router.Get("/<hash>", fileHandler.handleGet)
+	distroHandler := NewDistroHandler(app)
+	router.Put("/file", fileHandler.handlePut)
+	router.Get("/file/<hash>", fileHandler.handleGet)
+	router.Put("/distro", distroHandler.handlePut)
 
 	fmt.Printf("Running hyper-cas API in http://0.0.0.0:%d...\n", app.Port)
 	err := fasthttp.ListenAndServe(fmt.Sprintf(":%d", app.Port), router.HandleRequest)

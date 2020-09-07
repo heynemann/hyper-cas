@@ -10,5 +10,6 @@ require (
 	github.com/qiangxue/fasthttp-routing v0.0.0-20160225050629-6ccdc2a18d87
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.7.1
+	github.com/stretchr/testify v1.4.0
 	github.com/valyala/fasthttp v1.16.0
 )
