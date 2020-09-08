@@ -48,9 +48,11 @@ type Tree struct {
 
 func (t *Tree) Rebuild(data []byte, leafSize int, hasher crypto.Hash) error {
 	size := math.Ceil(float64(len(data)) / float64(leafSize))
-	depth := int(math.Log2(size)) + 1
-	leafCount := int(math.Pow(2, float64(depth-1)))
-	nodes := make([]*Node, int(leafCount*2-1))
+	nextnum := math.Ceil(math.Log2(size))
+	leafCount := int(math.Pow(2.0, nextnum))
+	nodeCount := leafCount*2 - 1
+	depth := int(math.Log(float64(nodeCount))/math.Log(2)) + 1
+	nodes := make([]*Node, nodeCount)
 	t.Nodes = nodes
 	t.Depth = depth
 	t.LeafCount = leafCount
@@ -80,8 +82,13 @@ func (t *Tree) buildLeaves(data []byte, leafSize int, hasher crypto.Hash) error 
 			continue
 		}
 
+		begin := i * 1024
+		end := (i + 1) * 1024
+		if end > len(data) {
+			end = len(data)
+		}
 		t.Nodes[i] = NewNode(
-			data[i*1024:(i+1)*1024], true, hasher,
+			data[begin:end], true, hasher,
 		)
 	}
 	return nil
