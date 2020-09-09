@@ -10,8 +10,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sha(content string) string {
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(content)))
+func sha(content ...[]byte) []byte {
+	h := sha256.New()
+	for _, hash := range content {
+		h.Write(hash)
+	}
+	return h.Sum(nil)
+}
+
+func fileHash(name string, hash []byte) []byte {
+	return sha([]byte(name), []byte(":"), hash)
+}
+
+func assertHash(t *testing.T, h1 []byte, h2 []byte) {
+	assert.Equal(t, fmt.Sprintf("%x", h1), fmt.Sprintf("%x", h2))
 }
 
 func TestTreeWithData(t *testing.T) {
@@ -30,7 +42,7 @@ func TestTreeWithData(t *testing.T) {
 	assert.NotNil(t, tree.Nodes[0])
 	assert.NotNil(t, tree.Nodes[1])
 	assert.NotNil(t, tree.Nodes[2])
-	h := sha(tree.Nodes[0].Hash + tree.Nodes[1].Hash)
+	h := sha(tree.Nodes[0].Hash, tree.Nodes[1].Hash)
 	assert.Equal(t, h, tree.Nodes[2].Hash)
 }
 
@@ -49,39 +61,44 @@ func TestTreeWithDataIrregular(t *testing.T) {
 	assert.Equal(t, 3, tree.Depth)
 	assert.NotNil(t, tree.Nodes[0])
 	assert.NotNil(t, tree.Nodes[1])
-	h := sha(tree.Nodes[0].Hash + tree.Nodes[1].Hash)
-	assert.Equal(t, h, tree.Nodes[4].Hash)
-	h = sha(tree.Nodes[2].Hash + tree.Nodes[3].Hash)
-	assert.Equal(t, h, tree.Nodes[5].Hash)
-	h = sha(tree.Nodes[4].Hash + tree.Nodes[5].Hash)
-	assert.Equal(t, h, tree.Nodes[6].Hash)
+	h := sha(tree.Nodes[0].Hash, tree.Nodes[1].Hash)
+	assertHash(t, h, tree.Nodes[4].Hash)
+	h = sha(tree.Nodes[2].Hash, tree.Nodes[3].Hash)
+	assertHash(t, h, tree.Nodes[5].Hash)
+	h = sha(tree.Nodes[4].Hash, tree.Nodes[5].Hash)
+	assertHash(t, h, tree.Nodes[6].Hash)
 }
 
 func TestTreeWithHashes(t *testing.T) {
-	hash1 := fmt.Sprintf("%x", sha256.Sum256([]byte("test1")))
-	hash2 := fmt.Sprintf("%x", sha256.Sum256([]byte("test2")))
-	hash3 := fmt.Sprintf("%x", sha256.Sum256([]byte("test3")))
-	hash4 := fmt.Sprintf("%x", sha256.Sum256([]byte("test4")))
+	hash1 := sha([]byte("test1"))
+	hash2 := sha([]byte("test2"))
+	hash3 := sha([]byte("test3"))
+	hash4 := sha([]byte("test4"))
 
-	tree, err := NewTreeWithHashes(map[string]string{
-		"test1": hash1,
-		"test2": hash2,
-		"test3": hash3,
-		"test4": hash4,
+	tree, err := NewTreeWithHashes([]struct {
+		key   string
+		value []byte
+	}{
+		{"test1", hash1},
+		{"test2", hash2},
+		{"test3", hash3},
+		{"test4", hash4},
 	}, crypto.SHA256)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, tree)
 	assert.Equal(t, 7, len(tree.Nodes))
 	assert.Equal(t, 3, tree.Depth)
-	assert.Equal(t, tree.Nodes[0].Hash, hash1)
-	assert.Equal(t, tree.Nodes[1].Hash, hash2)
-	assert.Equal(t, tree.Nodes[2].Hash, hash3)
-	assert.Equal(t, tree.Nodes[3].Hash, hash4)
-	h := sha(tree.Nodes[0].Hash + tree.Nodes[1].Hash)
-	assert.Equal(t, h, tree.Nodes[4].Hash)
-	h = sha(tree.Nodes[2].Hash + tree.Nodes[3].Hash)
-	assert.Equal(t, h, tree.Nodes[5].Hash)
-	h = sha(tree.Nodes[4].Hash + tree.Nodes[5].Hash)
-	assert.Equal(t, h, tree.Nodes[6].Hash)
+	// Assert leaf hashes
+	assertHash(t, tree.Nodes[0].Hash, fileHash("test1", hash1))
+	assertHash(t, tree.Nodes[1].Hash, fileHash("test2", hash2))
+	assertHash(t, tree.Nodes[2].Hash, fileHash("test3", hash3))
+	assertHash(t, tree.Nodes[3].Hash, fileHash("test4", hash4))
+	// Assert parent node hashes
+	h := sha(tree.Nodes[0].Hash, tree.Nodes[1].Hash)
+	assertHash(t, h, tree.Nodes[4].Hash)
+	h = sha(tree.Nodes[2].Hash, tree.Nodes[3].Hash)
+	assertHash(t, h, tree.Nodes[5].Hash)
+	h = sha(tree.Nodes[4].Hash, tree.Nodes[5].Hash)
+	assertHash(t, h, tree.Nodes[6].Hash)
 }
