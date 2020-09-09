@@ -57,6 +57,7 @@ func TestTreeWithDataIrregular(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.NotNil(t, tree)
+	assert.Equal(t, 3, tree.Size)
 	assert.Equal(t, 7, len(tree.Nodes))
 	assert.Equal(t, 3, tree.Depth)
 	assert.NotNil(t, tree.Nodes[0])
@@ -75,10 +76,7 @@ func TestTreeWithHashes(t *testing.T) {
 	hash3 := sha([]byte("test3"))
 	hash4 := sha([]byte("test4"))
 
-	tree, err := NewTreeWithHashes([]struct {
-		key   string
-		value []byte
-	}{
+	tree, err := NewTreeWithHashes([]NodeItem{
 		{"test1", hash1},
 		{"test2", hash2},
 		{"test3", hash3},
@@ -87,6 +85,7 @@ func TestTreeWithHashes(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.NotNil(t, tree)
+	assert.Equal(t, 4, tree.Size)
 	assert.Equal(t, 7, len(tree.Nodes))
 	assert.Equal(t, 3, tree.Depth)
 	// Assert leaf hashes

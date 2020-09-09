@@ -10,4 +10,5 @@ const (
 type Storage interface {
 	Store(key string, value []byte) error
 	Get(hash string) ([]byte, error)
+	// StoreDistro(hash string, contents []byte) error
 }

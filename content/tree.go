@@ -8,6 +8,11 @@ import (
 const REPEATHASH string = "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
 const REPEATCONTENT string = "\x00"
 
+type NodeItem = struct {
+	Key  string
+	Hash []byte
+}
+
 type Node struct {
 	Hash       []byte
 	Content    []byte
@@ -21,6 +26,7 @@ type Node struct {
 type Tree struct {
 	Nodes     []*Node
 	Depth     int
+	Size      int
 	LeafCount int
 	Hasher    crypto.Hash
 }
@@ -57,18 +63,19 @@ func (t *Tree) calculateTreeDimensions(size int) (int, int, int) {
 	return depth, nodeCount, leafCount
 }
 
-func (t *Tree) initTree(depth, nodeCount, leafCount int) error {
+func (t *Tree) initTree(depth, size, nodeCount, leafCount int) error {
 	nodes := make([]*Node, nodeCount)
 	t.Nodes = nodes
 	t.Depth = depth
 	t.LeafCount = leafCount
+	t.Size = size
 	return nil
 }
 
 func (t *Tree) rebuildFromData(data []byte, leafSize int, hasher crypto.Hash) error {
 	size := int(math.Ceil(float64(len(data)) / float64(leafSize)))
 	depth, nodeCount, leafCount := t.calculateTreeDimensions(size)
-	t.initTree(depth, nodeCount, leafCount)
+	t.initTree(depth, size, nodeCount, leafCount)
 	err := t.buildLeavesWithData(data, leafSize, hasher)
 	if err != nil {
 		return err
@@ -80,13 +87,10 @@ func (t *Tree) rebuildFromData(data []byte, leafSize int, hasher crypto.Hash) er
 	return nil
 }
 
-func (t *Tree) rebuildFromHashes(data []struct {
-	key   string
-	value []byte
-}) error {
+func (t *Tree) rebuildFromHashes(data []NodeItem) error {
 	size := len(data)
 	depth, nodeCount, leafCount := t.calculateTreeDimensions(size)
-	t.initTree(depth, nodeCount, leafCount)
+	t.initTree(depth, size, nodeCount, leafCount)
 	err := t.buildLeavesWithMap(data)
 	if err != nil {
 		return err
@@ -124,16 +128,13 @@ func (t *Tree) buildLeavesWithData(data []byte, leafSize int, hasher crypto.Hash
 	return nil
 }
 
-func (t *Tree) buildLeavesWithMap(data []struct {
-	key   string
-	value []byte
-}) error {
+func (t *Tree) buildLeavesWithMap(data []NodeItem) error {
 	itemCount := 0
 	for _, item := range data {
 		h := t.Hasher.New()
-		h.Write([]byte(item.key))
+		h.Write([]byte(item.Key))
 		h.Write([]byte(":"))
-		h.Write(item.value)
+		h.Write(item.Hash)
 		t.Nodes[itemCount] = &Node{
 			Hash:     h.Sum(nil),
 			Content:  nil,
@@ -183,7 +184,7 @@ func (t *Tree) Leaves() []*Node {
 	if len(t.Nodes) < 1 {
 		return nil
 	}
-	return nil
+	return t.Nodes[0:t.Size]
 }
 
 func NewTreeWithData(data []byte, leafSize int, hasher crypto.Hash) (*Tree, error) {
@@ -194,10 +195,7 @@ func NewTreeWithData(data []byte, leafSize int, hasher crypto.Hash) (*Tree, erro
 	return t, nil
 }
 
-func NewTreeWithHashes(data []struct {
-	key   string
-	value []byte
-}, hasher crypto.Hash) (*Tree, error) {
+func NewTreeWithHashes(data []NodeItem, hasher crypto.Hash) (*Tree, error) {
 	t := &Tree{
 		Hasher: hasher,
 	}

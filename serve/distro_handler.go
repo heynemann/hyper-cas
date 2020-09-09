@@ -1,6 +1,13 @@
 package serve
 
 import (
+	"bufio"
+	"bytes"
+	"crypto"
+	"fmt"
+	"strings"
+
+	"github.com/heynemann/hyper-cas/content"
 	routing "github.com/qiangxue/fasthttp-routing"
 )
 
@@ -14,20 +21,27 @@ func NewDistroHandler(app *App) *DistroHandler {
 
 func (handler *DistroHandler) handlePut(ctx *routing.Context) error {
 	value := ctx.Request.Body()
-	hash, err := handler.App.Hasher.Calc(value)
+	scanner := bufio.NewScanner(bytes.NewReader(value))
+
+	items := []content.NodeItem{}
+	for scanner.Scan() {
+		parts := strings.Split(scanner.Text(), ":")
+		if len(parts) != 2 {
+			return fmt.Errorf("The body should be composed of lines with {filepath}:{content hash} only.")
+		}
+		items = append(items, content.NodeItem{
+			parts[0],
+			[]byte(parts[1]),
+		})
+	}
+
+	tree, err := content.NewTreeWithHashes(items, crypto.SHA256)
 	if err != nil {
 		return err
 	}
-	strHash := string(hash)
-	err = handler.App.Storage.Store(strHash, value)
-	if err != nil {
-		return err
-	}
-	err = handler.App.Cache.Set(strHash, value)
-	if err != nil {
-		return err
-	}
-	ctx.SetBody(hash)
+	root := tree.Root()
+	ctx.SetBody([]byte(fmt.Sprintf("%x", root.Hash)))
+
 	return nil
 }
 

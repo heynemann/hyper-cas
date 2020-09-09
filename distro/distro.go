@@ -1,10 +1,23 @@
 package distro
 
+type DistroItem struct {
+	path string
+	hash string
+}
+
 type Distro struct {
-	Label      string
-	PathToHash map[string]string
+	Paths  []string
+	Hashes []string
 }
 
 func NewDistro() *Distro {
-	return &Distro{PathToHash: map[string]string{}}
+	return &Distro{
+		Paths:  []string{},
+		Hashes: []string{},
+	}
+}
+
+func (d *Distro) AppendPath(path string, hash string) {
+	d.Paths = append(d.Paths, path)
+	d.Hashes = append(d.Hashes, hash)
 }
