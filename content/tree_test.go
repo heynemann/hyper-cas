@@ -101,3 +101,19 @@ func TestTreeWithHashes(t *testing.T) {
 	h = sha(tree.Nodes[4].Hash, tree.Nodes[5].Hash)
 	assertHash(t, h, tree.Nodes[6].Hash)
 }
+
+func BenchmarkBigTree(b *testing.B) {
+	items := []NodeItem{}
+	for i := 0; i < 100; i++ {
+		key := fmt.Sprintf("test %d", i)
+		hash := sha([]byte(key))
+		items = append(items, NodeItem{
+			Key:  key,
+			Hash: hash,
+		})
+	}
+
+	for n := 0; n < b.N; n++ {
+		NewTreeWithHashes(items, crypto.SHA256)
+	}
+}

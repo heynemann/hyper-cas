@@ -2,7 +2,6 @@ package distro
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,7 +22,6 @@ func TestParsingDistroWithPaths(t *testing.T) {
 	d.AppendPath("other/path/to/file.txt", "72de8eb2853d5a5c89f256c96966f101987b2596")
 
 	data, err := json.Marshal(d)
-	fmt.Println(string(data))
 
 	distro, err := ParseDistro(data)
 
