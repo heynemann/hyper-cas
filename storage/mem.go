@@ -8,6 +8,7 @@ import (
 type MemStorage struct {
 	sync.RWMutex
 	storage map[string][]byte
+	distros map[string][]string
 }
 
 func NewMemStorage() (*MemStorage, error) {
@@ -28,4 +29,20 @@ func (st *MemStorage) Get(hash string) ([]byte, error) {
 		return val, nil
 	}
 	return nil, fmt.Errorf("Hash %s was not found in storage.", hash)
+}
+
+func (st *MemStorage) StoreDistro(root string, hashes []string) error {
+	st.Lock()
+	defer st.Unlock()
+	st.distros[root] = hashes
+	return nil
+}
+
+func (st *MemStorage) GetDistro(root string) ([]string, error) {
+	st.RLock()
+	defer st.RUnlock()
+	if val, ok := st.distros[root]; ok {
+		return val, nil
+	}
+	return nil, fmt.Errorf("Distro %s was not found in storage.", root)
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -23,6 +24,7 @@ func (handler *DistroHandler) handlePut(ctx *routing.Context) error {
 	value := ctx.Request.Body()
 	scanner := bufio.NewScanner(bytes.NewReader(value))
 
+	contents := []string{}
 	items := []content.NodeItem{}
 	for scanner.Scan() {
 		parts := strings.Split(scanner.Text(), ":")
@@ -33,6 +35,7 @@ func (handler *DistroHandler) handlePut(ctx *routing.Context) error {
 			parts[0],
 			[]byte(parts[1]),
 		})
+		contents = append(contents, parts[1])
 	}
 
 	tree, err := content.NewTreeWithHashes(items, crypto.SHA256)
@@ -40,29 +43,38 @@ func (handler *DistroHandler) handlePut(ctx *routing.Context) error {
 		return err
 	}
 	root := tree.Root()
-	ctx.SetBody([]byte(fmt.Sprintf("%x", root.Hash)))
+	hash := fmt.Sprintf("%x", root.Hash)
+	err = handler.App.Storage.StoreDistro(hash, contents)
+	if err != nil {
+		return err
+	}
+	ctx.SetBody([]byte(hash))
 
 	return nil
 }
 
-// func (handler *DistroHandler) handleGet(ctx *routing.Context) error {
-// hash := ctx.Param("hash")
-// cached, err := handler.App.Cache.Get(hash)
-// if err != nil {
-// return err
-// }
-// if cached != nil {
-// ctx.SetBody(cached)
-// return nil
-// }
-// contents, err := handler.App.Storage.Get(hash)
-// if err != nil {
-// return err
-// }
-// err = handler.App.Cache.Set(hash, contents)
-// if err != nil {
-// return err
-// }
-// ctx.SetBody(contents)
-// return nil
-// }
+func (handler *DistroHandler) handleGet(ctx *routing.Context) error {
+	hash := ctx.Param("hash")
+	cached, err := handler.App.Cache.Get(hash)
+	if err != nil {
+		return err
+	}
+	if cached != nil {
+		ctx.SetBody(cached)
+		return nil
+	}
+	contents, err := handler.App.Storage.GetDistro(hash)
+	if err != nil {
+		return err
+	}
+	body, err := json.Marshal(contents)
+	if err != nil {
+		return err
+	}
+	err = handler.App.Cache.Set(hash, body)
+	if err != nil {
+		return err
+	}
+	ctx.SetBody(body)
+	return nil
+}
