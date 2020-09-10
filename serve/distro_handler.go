@@ -78,3 +78,14 @@ func (handler *DistroHandler) handleGet(ctx *routing.Context) error {
 	ctx.SetBody(body)
 	return nil
 }
+
+func (handler *DistroHandler) handleHead(ctx *routing.Context) error {
+	hash := ctx.Param("hash")
+
+	if has := handler.App.Storage.HasDistro(hash); has {
+		ctx.SetStatusCode(200)
+	} else {
+		ctx.SetStatusCode(404)
+	}
+	return nil
+}

@@ -52,3 +52,14 @@ func (handler *FileHandler) handleGet(ctx *routing.Context) error {
 	ctx.SetBody(contents)
 	return nil
 }
+
+func (handler *FileHandler) handleHead(ctx *routing.Context) error {
+	hash := ctx.Param("hash")
+
+	if has := handler.App.Storage.Has(hash); has {
+		ctx.SetStatusCode(200)
+	} else {
+		ctx.SetStatusCode(404)
+	}
+	return nil
+}

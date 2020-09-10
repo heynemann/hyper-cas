@@ -20,6 +20,14 @@ func NewFSStorage() (*FSStorage, error) {
 	return &FSStorage{rootPath: rootPath}, nil
 }
 
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
 func (st *FSStorage) Store(hash string, value []byte) error {
 	fileDir := path.Join(st.rootPath, "files", hash[0:2], hash[2:4])
 	filePath := path.Join(fileDir, hash)
@@ -59,6 +67,11 @@ func (st *FSStorage) Get(hash string) ([]byte, error) {
 	}
 
 	return dat, nil
+}
+
+func (st *FSStorage) Has(hash string) bool {
+	filePath := path.Join(st.rootPath, "files", hash[0:2], hash[2:4], hash)
+	return fileExists(filePath)
 }
 
 func (st *FSStorage) StoreDistro(root string, hashes []string) error {
@@ -110,4 +123,9 @@ func (st *FSStorage) GetDistro(root string) ([]string, error) {
 	}
 
 	return contents, nil
+}
+
+func (st *FSStorage) HasDistro(hash string) bool {
+	filePath := path.Join(st.rootPath, "distros", hash[0:2], hash[2:4], hash)
+	return fileExists(filePath)
 }

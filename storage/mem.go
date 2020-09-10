@@ -31,6 +31,15 @@ func (st *MemStorage) Get(hash string) ([]byte, error) {
 	return nil, fmt.Errorf("Hash %s was not found in storage.", hash)
 }
 
+func (st *MemStorage) Has(hash string) bool {
+	st.RLock()
+	defer st.RUnlock()
+	if _, ok := st.storage[hash]; ok {
+		return true
+	}
+	return false
+}
+
 func (st *MemStorage) StoreDistro(root string, hashes []string) error {
 	st.Lock()
 	defer st.Unlock()
@@ -45,4 +54,13 @@ func (st *MemStorage) GetDistro(root string) ([]string, error) {
 		return val, nil
 	}
 	return nil, fmt.Errorf("Distro %s was not found in storage.", root)
+}
+
+func (st *MemStorage) HasDistro(hash string) bool {
+	st.RLock()
+	defer st.RUnlock()
+	if _, ok := st.distros[hash]; ok {
+		return true
+	}
+	return false
 }

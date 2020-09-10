@@ -71,8 +71,10 @@ func (app *App) ListenAndServe() {
 	distroHandler := NewDistroHandler(app)
 	router.Put("/file", fileHandler.handlePut)
 	router.Get("/file/<hash>", fileHandler.handleGet)
+	router.Head("/file/<hash>", fileHandler.handleHead)
 	router.Put("/distro", distroHandler.handlePut)
 	router.Get("/distro/<hash>", distroHandler.handleGet)
+	router.Head("/distro/<hash>", distroHandler.handleHead)
 
 	fmt.Printf("Running hyper-cas API in http://0.0.0.0:%d...\n", app.Port)
 	err := fasthttp.ListenAndServe(fmt.Sprintf(":%d", app.Port), router.HandleRequest)
