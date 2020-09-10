@@ -17,9 +17,17 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/heynemann/hyper-cas/synchronizer"
 	"github.com/spf13/cobra"
 )
+
+func folderExists(path string) bool {
+	info, err := os.Stat(path)
+	return !os.IsNotExist(err) && info.Mode().IsDir()
+}
 
 // syncCmd represents the sync command
 var syncCmd = &cobra.Command{
@@ -27,20 +35,32 @@ var syncCmd = &cobra.Command{
 	Short: "Sync a folder into a distribution in hyper-cas",
 	Long:  `Sync will synchronize all files in a given folder into hyper-cas`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("sync called")
+		if len(args) != 1 {
+			panic("There must be only a single argument specifying path to sync.")
+		}
+		var err error
+		folder := args[0]
+		if !filepath.IsAbs(folder) {
+			folder, err = filepath.Abs(folder)
+			if err != nil {
+				panic(err)
+			}
+		}
+		if !folderExists(folder) {
+			panic(fmt.Sprintf("Folder %s does not exist!", folder))
+		}
+		s := synchronizer.NewSync(folder)
+		err = s.Run()
+		if err != nil {
+			panic(err)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(syncCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// syncCmd.PersistentFlags().String("foo", "", "A help for foo")
-
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// syncCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// syncCmd.Flags().StringVarP("toggle", "t", false, "Help message for toggle")
 }
