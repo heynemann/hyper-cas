@@ -36,7 +36,7 @@ var serveCmd = &cobra.Command{
 	Long: `hyper-cas serve handles all requests to store either data or
 distributions.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		hasherType := hash.SHA1
+		hasherType := hash.SHA256
 		cacheType := cache.LRU
 		storageType := storage.Memory
 		if viper.GetString("storage.type") == "file" {

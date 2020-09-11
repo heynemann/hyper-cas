@@ -42,6 +42,8 @@ func getHasher(hasherType hash.HasherType) (hash.Hasher, error) {
 	switch hasherType {
 	case hash.SHA1:
 		return hash.NewSHA1Hasher()
+	case hash.SHA256:
+		return hash.NewSHA256Hasher()
 	}
 
 	return nil, fmt.Errorf("No cache could be found for cache type %v", hasherType)

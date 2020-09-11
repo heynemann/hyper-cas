@@ -50,7 +50,7 @@ var syncCmd = &cobra.Command{
 			panic(fmt.Sprintf("Folder %s does not exist!", folder))
 		}
 		s := synchronizer.NewSync(folder)
-		err = s.Run()
+		_, err = s.Run()
 		if err != nil {
 			panic(err)
 		}

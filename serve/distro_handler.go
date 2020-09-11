@@ -35,7 +35,7 @@ func (handler *DistroHandler) handlePut(ctx *routing.Context) error {
 			parts[0],
 			[]byte(parts[1]),
 		})
-		contents = append(contents, parts[1])
+		contents = append(contents, fmt.Sprintf("%s:%s", parts[0], parts[1]))
 	}
 
 	tree, err := content.NewTreeWithHashes(items, crypto.SHA256)

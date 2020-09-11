@@ -1,6 +1,8 @@
 package serve
 
 import (
+	"fmt"
+
 	routing "github.com/qiangxue/fasthttp-routing"
 )
 
@@ -18,7 +20,7 @@ func (handler *FileHandler) handlePut(ctx *routing.Context) error {
 	if err != nil {
 		return err
 	}
-	strHash := string(hash)
+	strHash := fmt.Sprintf("%x", hash)
 	err = handler.App.Storage.Store(strHash, value)
 	if err != nil {
 		return err
@@ -27,7 +29,7 @@ func (handler *FileHandler) handlePut(ctx *routing.Context) error {
 	if err != nil {
 		return err
 	}
-	ctx.SetBody(hash)
+	ctx.SetBody([]byte(strHash))
 	return nil
 }
 
