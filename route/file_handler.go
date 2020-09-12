@@ -43,6 +43,17 @@ func (handler *FileHandler) handleGet(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	label, err := handler.App.Cache.Get(distroHash)
+	if label != nil {
+		distroHash = string(label)
+	} else {
+		label, _ := handler.App.Storage.GetLabel(distroHash)
+		if label != "" {
+			handler.App.Cache.Set(distroHash, []byte(label))
+			distroHash = label
+		}
+	}
+
 	distro, err := handler.App.Cache.GetDistro(distroHash)
 	if err != nil {
 		ctx.SetStatusCode(500)
