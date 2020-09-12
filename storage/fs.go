@@ -129,3 +129,49 @@ func (st *FSStorage) HasDistro(hash string) bool {
 	filePath := path.Join(st.rootPath, "distros", hash[0:2], hash[2:4], hash)
 	return fileExists(filePath)
 }
+
+func (st *FSStorage) StoreLabel(label, hash string) error {
+	fileDir := path.Join(st.rootPath, "labels")
+	filePath := path.Join(fileDir, label)
+
+	err := os.MkdirAll(fileDir, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	lock := fslock.New(filePath)
+	err = lock.LockWithTimeout(time.Millisecond * 100)
+	if err != nil {
+		return err
+	}
+	defer lock.Unlock()
+
+	err = ioutil.WriteFile(filePath, []byte(hash), 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (st *FSStorage) GetLabel(label string) (string, error) {
+	filePath := path.Join(st.rootPath, "labels", label)
+	lock := fslock.New(filePath)
+	err := lock.LockWithTimeout(time.Millisecond * 100)
+	if err != nil {
+		return "", err
+	}
+	defer lock.Unlock()
+
+	dat, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	return string(dat), nil
+}
+
+func (st *FSStorage) HasLabel(label string) bool {
+	filePath := path.Join(st.rootPath, "labels", label)
+	return fileExists(filePath)
+}

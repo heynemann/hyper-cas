@@ -9,6 +9,7 @@ type MemStorage struct {
 	sync.RWMutex
 	storage map[string][]byte
 	distros map[string][]string
+	labels  map[string]string
 }
 
 func NewMemStorage() (*MemStorage, error) {
@@ -60,6 +61,31 @@ func (st *MemStorage) HasDistro(hash string) bool {
 	st.RLock()
 	defer st.RUnlock()
 	if _, ok := st.distros[hash]; ok {
+		return true
+	}
+	return false
+}
+
+func (st *MemStorage) StoreLabel(label, hash string) error {
+	st.Lock()
+	defer st.Unlock()
+	st.labels[label] = hash
+	return nil
+}
+
+func (st *MemStorage) GetLabel(label string) (string, error) {
+	st.RLock()
+	defer st.RUnlock()
+	if val, ok := st.labels[label]; ok {
+		return val, nil
+	}
+	return "", fmt.Errorf("Label %s was not found in storage.", label)
+}
+
+func (st *MemStorage) HasLabel(label string) bool {
+	st.RLock()
+	defer st.RUnlock()
+	if _, ok := st.labels[label]; ok {
 		return true
 	}
 	return false

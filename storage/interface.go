@@ -14,4 +14,7 @@ type Storage interface {
 	StoreDistro(hash string, contents []string) error
 	GetDistro(root string) ([]string, error)
 	HasDistro(hash string) bool
+	StoreLabel(hash string, label string) error
+	GetLabel(label string) (string, error)
+	HasLabel(label string) bool
 }
