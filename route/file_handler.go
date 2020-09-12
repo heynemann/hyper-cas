@@ -3,7 +3,9 @@ package route
 import (
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/heynemann/hyper-cas/utils"
 	"github.com/valyala/fasthttp"
 )
 
@@ -72,7 +74,17 @@ func (handler *FileHandler) handleGet(ctx *fasthttp.RequestCtx) {
 
 	path = strings.TrimLeft(path, "/")
 	if val, ok := distro[path]; ok {
-		ctx.SetBodyString(val)
+		contents, err := handler.getFile(val)
+		if err != nil {
+			ctx.SetStatusCode(500)
+			ctx.SetBodyString(fmt.Sprintf("%v", err))
+			return
+		}
+		err = writeContents(ctx, contents)
+		if err != nil {
+			ctx.SetStatusCode(500)
+			ctx.SetBodyString(fmt.Sprintf("%v", err))
+		}
 	} else {
 		ctx.SetStatusCode(404)
 	}
@@ -84,11 +96,45 @@ func (h *FileHandler) buildDistro(paths []string) (map[string]string, error) {
 		parts := strings.Split(p, ":")
 		path := parts[0]
 		hash := parts[1]
-		f, err := h.App.Storage.Get(hash)
-		if err != nil {
-			return nil, err
-		}
-		r[path] = string(f)
+		r[path] = hash
 	}
 	return r, nil
+}
+
+func (h *FileHandler) getFile(hash string) ([]byte, error) {
+	f, err := h.App.Cache.Get(hash)
+	if err != nil {
+		return nil, err
+	}
+	if f != nil {
+		return f, nil
+	}
+	f, err = h.App.Storage.Get(hash)
+	if err != nil {
+		return nil, err
+	}
+	err = h.App.Cache.Set(hash, f)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+func writeContents(ctx *fasthttp.RequestCtx, contents []byte) error {
+	gzipEnabled := strings.Contains(string(ctx.Request.Header.Peek("Accept-Encoding")), "gzip")
+	ctx.Response.Header.Add("content-type", "text/html; charset=utf-8")
+	ctx.Response.Header.Add("date", time.Now().Format("RFC1123"))
+	ctx.Response.Header.Set("server", "hyper-cas")
+	if gzipEnabled {
+		ctx.Response.Header.Add("content-encoding", "gzip")
+		ctx.SetBody(contents)
+	} else {
+		res, err := utils.Unzip(contents)
+		if err != nil {
+			return err
+		}
+		ctx.SetBody(res)
+	}
+
+	return nil
 }
