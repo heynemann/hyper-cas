@@ -51,7 +51,7 @@ var routeCmd = &cobra.Command{
 }
 
 func init() {
-	apiCmd.AddCommand(routeCmd)
+	rootCmd.AddCommand(routeCmd)
 
 	// Here you will define your flags and configuration settings.
 

@@ -17,27 +17,8 @@ func NewFileHandler(app *App) *FileHandler {
 	return &FileHandler{App: app}
 }
 
-func getDistroAndPath(path string) (string, string, error) {
-	if path == "" {
-		return "", "", fmt.Errorf("Invalid path. Must contain at least distro (%s).", path)
-	}
-	var sb strings.Builder
-	distro := ""
-	for _, char := range path[1:] {
-		if distro == "" && char == '/' {
-			distro = sb.String()
-			sb.Reset()
-		}
-		sb.WriteRune(char)
-	}
-	if distro == "" {
-		return "", "", fmt.Errorf("Invalid path. Must contain at least distro (%s).", path)
-	}
-	return distro, sb.String(), nil
-}
-
 func (handler *FileHandler) handleGet(ctx *fasthttp.RequestCtx) {
-	distroHash, path, err := getDistroAndPath(string(ctx.Path()))
+	distroHash, path, err := handler.App.GetDistroAndPath(string(ctx.Host()), string(ctx.Path()), ctx.Request.Header.Peek)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -83,6 +64,10 @@ func (handler *FileHandler) handleGet(ctx *fasthttp.RequestCtx) {
 		}
 	}
 
+	// Serve index.html if ends in '/' or if root of distribution
+	if path == "" || strings.HasSuffix(path, "/") {
+		path = fmt.Sprintf("%s/index.html", path)
+	}
 	path = strings.TrimLeft(path, "/")
 	if val, ok := distro[path]; ok {
 		contents, err := handler.getFile(val)

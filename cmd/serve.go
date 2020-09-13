@@ -52,7 +52,7 @@ distributions.`,
 }
 
 func init() {
-	apiCmd.AddCommand(serveCmd)
+	rootCmd.AddCommand(serveCmd)
 
 	// Here you will define your flags and configuration settings.
 

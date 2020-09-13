@@ -24,6 +24,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var syncLabel string
+
 func folderExists(path string) bool {
 	info, err := os.Stat(path)
 	return !os.IsNotExist(err) && info.Mode().IsDir()
@@ -50,7 +52,7 @@ var syncCmd = &cobra.Command{
 			panic(fmt.Sprintf("Folder %s does not exist!", folder))
 		}
 		s := synchronizer.NewSync(folder)
-		_, err = s.Run()
+		_, err = s.Run(syncLabel)
 		if err != nil {
 			panic(err)
 		}
@@ -59,8 +61,5 @@ var syncCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(syncCmd)
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// syncCmd.Flags().StringVarP("toggle", "t", false, "Help message for toggle")
+	syncCmd.Flags().StringVarP(&syncLabel, "label", "l", "", "Label to apply to this new distribution")
 }

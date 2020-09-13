@@ -110,7 +110,17 @@ func (s *Sync) UploadDistro(hashes map[string]string) (string, error) {
 	return body, nil
 }
 
-func (s *Sync) Run() (string, error) {
+func (s *Sync) SetLabel(label, hash string) error {
+	status, body := doReq("PUT", "http://localhost:2485/label", fmt.Sprintf("label=%s&hash=%s", label, hash))
+	if status != 200 {
+		return fmt.Errorf("Failed to put new distro. Status: %d Error: %s", status, body)
+	}
+	fmt.Printf("* Updated label %s => %s.\n", label, hash)
+	return nil
+
+}
+
+func (s *Sync) Run(label string) (string, error) {
 	files, contents, err := listFiles(s.rootDir)
 	if err != nil {
 		panic(err)
@@ -127,6 +137,12 @@ func (s *Sync) Run() (string, error) {
 	distro, err := s.UploadDistro(hashes)
 	if err != nil {
 		return "", err
+	}
+	if label != "" {
+		err = s.SetLabel(label, distro)
+		if err != nil {
+			return "", err
+		}
 	}
 	return distro, nil
 }

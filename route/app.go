@@ -7,14 +7,15 @@ import (
 	"github.com/heynemann/hyper-cas/cache"
 	"github.com/heynemann/hyper-cas/hash"
 	"github.com/heynemann/hyper-cas/storage"
+	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 )
 
 type App struct {
-	Port    int
-	Hasher  hash.Hasher
-	Storage storage.Storage
-	Cache   cache.Cache
+	Port             int
+	Storage          storage.Storage
+	Cache            cache.Cache
+	DistroExtractors []DistroExtractor
 }
 
 func getStorage(storageType storage.StorageType) (storage.Storage, error) {
@@ -37,23 +38,23 @@ func getCache(cacheType cache.CacheType) (cache.Cache, error) {
 	return nil, fmt.Errorf("No cache could be found for cache type %v", cacheType)
 }
 
-func getHasher(hasherType hash.HasherType) (hash.Hasher, error) {
-	switch hasherType {
-	case hash.SHA1:
-		return hash.NewSHA1Hasher()
-	case hash.SHA256:
-		return hash.NewSHA256Hasher()
+func getDistroExtractors() ([]DistroExtractor, error) {
+	types := viper.GetStringSlice("distroExtractors")
+	extractors := []DistroExtractor{}
+	for _, extractorType := range types {
+		switch extractorType {
+		case "path":
+			extractor := NewPathExtractor()
+			extractors = append(extractors, extractor)
+		case "subdomain":
+			extractor := NewSubdomainExtractor()
+			extractors = append(extractors, extractor)
+		}
 	}
-
-	return nil, fmt.Errorf("No cache could be found for cache type %v", hasherType)
+	return extractors, nil
 }
 
 func NewApp(port int, hasherType hash.HasherType, storageType storage.StorageType, cacheType cache.CacheType) (*App, error) {
-	hasher, err := getHasher(hasherType)
-	if err != nil {
-		return nil, err
-	}
-
 	storage, err := getStorage(storageType)
 	if err != nil {
 		return nil, err
@@ -63,7 +64,22 @@ func NewApp(port int, hasherType hash.HasherType, storageType storage.StorageTyp
 	if err != nil {
 		return nil, err
 	}
-	return &App{Port: port, Hasher: hasher, Storage: storage, Cache: cache}, nil
+
+	distroExtractors, err := getDistroExtractors()
+	if err != nil {
+		return nil, err
+	}
+	return &App{Port: port, Storage: storage, Cache: cache, DistroExtractors: distroExtractors}, nil
+}
+
+func (app *App) GetDistroAndPath(host, path string, header func(string) []byte) (string, string, error) {
+	for _, extractor := range app.DistroExtractors {
+		distro, path, err := extractor.ExtractDistroAndPath(host, path, header)
+		if err == nil {
+			return distro, path, nil
+		}
+	}
+	return "", "", fmt.Errorf("No extractors could extract a distribution.")
 }
 
 func (app *App) ListenAndServe() {
