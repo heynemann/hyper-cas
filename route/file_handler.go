@@ -2,6 +2,7 @@ package route
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -9,12 +10,33 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+type Route struct {
+	Matcher    *regexp.Regexp
+	Url        string
+	StatusCode int
+}
+
 type FileHandler struct {
-	App *App
+	App    *App
+	Routes []*Route
 }
 
 func NewFileHandler(app *App) *FileHandler {
-	return &FileHandler{App: app}
+	re, _ := regexp.Compile("/api/(.*)")
+	re2, _ := regexp.Compile("/(.*)/p")
+	routes := []*Route{
+		{
+			Matcher:    re,
+			Url:        "https://storecomponents.vtexcommercestable.com.br/api/:splat",
+			StatusCode: 200,
+		},
+		{
+			Matcher:    re2,
+			Url:        "/__client-side-product__/p",
+			StatusCode: 200,
+		},
+	}
+	return &FileHandler{App: app, Routes: routes}
 }
 
 func (handler *FileHandler) handleGet(ctx *fasthttp.RequestCtx) {
@@ -82,8 +104,34 @@ func (handler *FileHandler) handleGet(ctx *fasthttp.RequestCtx) {
 			ctx.SetBodyString(fmt.Sprintf("%v", err))
 		}
 	} else {
-		ctx.SetStatusCode(404)
+		handler.tryRedirects(ctx, path)
 	}
+}
+
+func (h *FileHandler) tryRedirects(ctx *fasthttp.RequestCtx, path string) {
+	for _, route := range h.Routes {
+		m := route.Matcher.FindStringSubmatch(fmt.Sprintf("/%s", path))
+		if len(m) > 0 {
+			newUrl := strings.ReplaceAll(route.Url, ":splat", m[1])
+			req := fasthttp.AcquireRequest()
+			req.SetRequestURI(newUrl)
+
+			resp := fasthttp.AcquireResponse()
+			client := &fasthttp.Client{}
+			client.Do(req, resp)
+
+			resp.Header.VisitAll(func(key, value []byte) {
+				ctx.Response.Header.SetBytesKV(key, value)
+			})
+
+			bodyBytes := resp.Body()
+			ctx.SetBody(bodyBytes)
+			ctx.SetStatusCode(resp.StatusCode())
+			return
+		}
+	}
+
+	ctx.SetStatusCode(404)
 }
 
 func (h *FileHandler) buildDistro(paths []string) (map[string]string, error) {
