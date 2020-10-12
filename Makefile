@@ -5,10 +5,10 @@ serve:
 
 route:
 		# @go run main.go route --config hyper-cas.yaml
-		@docker run -v "`pwd`/route-nginx.conf:/etc/nginx/nginx.conf" -v "/tmp/hyper-cas:/app" -v "/tmp/hyper-cas/sites:/etc/nginx/conf.d" -p 8000:80 -it nginx:latest
+		@docker run -v "`pwd`/route-nginx.conf:/etc/nginx/nginx.conf" -v "/tmp/hyper-cas:/app" -v "/tmp/hyper-cas/sites:/etc/nginx/conf.d" -p 80:80 -it nginx:latest
 
 route-daemon:
-		@docker run -v "`pwd`/route-nginx.conf:/etc/nginx/nginx.conf" -v "/tmp/hyper-cas:/app" -v "/tmp/hyper-cas/sites:/etc/nginx/conf.d" -p 8000:80 -d nginx:latest
+		@docker run -v "`pwd`/route-nginx.conf:/etc/nginx/nginx.conf" -v "/tmp/hyper-cas:/app" -v "/tmp/hyper-cas/sites:/etc/nginx/conf.d" -p 80:80 -d nginx:latest
 
 sync-simple:
 		@go run main.go sync --config ./hyper-cas.yaml --label master ./fixtures/simple

@@ -43,6 +43,8 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+	include {{.RootPath}}/nginx/*.conf;
+
     error_page 404 /404.html;
     error_page 500 502 503 504 /50x.html;
 }
