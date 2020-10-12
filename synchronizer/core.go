@@ -28,7 +28,10 @@ func doReq(method, url, body string) (int, string) {
 		req.SetBodyString(body)
 	}
 
-	fasthttp.Do(req, resp)
+	err := fasthttp.Do(req, resp)
+	if err != nil {
+		return 500, fmt.Sprintf("%s for %s failed with %v.", method, url, err)
+	}
 
 	status := resp.StatusCode()
 	bodyBytes := resp.Body()

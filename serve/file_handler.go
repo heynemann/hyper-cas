@@ -7,6 +7,7 @@ import (
 
 	"github.com/heynemann/hyper-cas/utils"
 	routing "github.com/qiangxue/fasthttp-routing"
+	"github.com/spf13/viper"
 )
 
 type FileHandler struct {
@@ -14,6 +15,7 @@ type FileHandler struct {
 }
 
 func NewFileHandler(app *App) *FileHandler {
+	viper.SetDefault("gzipSourceFiles", false)
 	return &FileHandler{App: app}
 }
 
@@ -24,11 +26,14 @@ func (handler *FileHandler) handlePut(ctx *routing.Context) error {
 		return err
 	}
 	strHash := fmt.Sprintf("%x", hash)
-	zipped, err := utils.Zip(value)
-	if err != nil {
-		return err
+	if viper.GetBool("gzipSourceFiles") {
+		var err error
+		value, err = utils.Zip(value)
+		if err != nil {
+			return err
+		}
 	}
-	err = handler.App.Storage.Store(strHash, zipped)
+	err = handler.App.Storage.Store(strHash, value)
 	if err != nil {
 		return err
 	}

@@ -6,24 +6,26 @@ import (
 
 	"github.com/heynemann/hyper-cas/cache"
 	"github.com/heynemann/hyper-cas/hash"
+	"github.com/heynemann/hyper-cas/sitebuilder"
 	"github.com/heynemann/hyper-cas/storage"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 )
 
 type App struct {
-	Port    int
-	Hasher  hash.Hasher
-	Storage storage.Storage
-	Cache   cache.Cache
+	Port        int
+	Hasher      hash.Hasher
+	Storage     storage.Storage
+	Cache       cache.Cache
+	SiteBuilder sitebuilder.SiteBuilder
 }
 
-func getStorage(storageType storage.StorageType) (storage.Storage, error) {
+func getStorage(storageType storage.StorageType, siteBuilder sitebuilder.SiteBuilder) (storage.Storage, error) {
 	switch storageType {
 	case storage.Memory:
 		return storage.NewMemStorage()
 	case storage.FileSystem:
-		return storage.NewFSStorage()
+		return storage.NewFSStorage(siteBuilder)
 	}
 
 	return nil, fmt.Errorf("No storage could be found for storage type %v", storageType)
@@ -49,13 +51,23 @@ func getHasher(hasherType hash.HasherType) (hash.Hasher, error) {
 	return nil, fmt.Errorf("No cache could be found for cache type %v", hasherType)
 }
 
+func getSiteBuilder() (sitebuilder.SiteBuilder, error) {
+	siteBuilder, err := sitebuilder.NewNginxSiteBuilder()
+	return siteBuilder, err
+}
+
 func NewApp(port int, hasherType hash.HasherType, storageType storage.StorageType, cacheType cache.CacheType) (*App, error) {
 	hasher, err := getHasher(hasherType)
 	if err != nil {
 		return nil, err
 	}
 
-	storage, err := getStorage(storageType)
+	siteBuilder, err := getSiteBuilder()
+	if err != nil {
+		return nil, err
+	}
+
+	storage, err := getStorage(storageType, siteBuilder)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +76,8 @@ func NewApp(port int, hasherType hash.HasherType, storageType storage.StorageTyp
 	if err != nil {
 		return nil, err
 	}
-	return &App{Port: port, Hasher: hasher, Storage: storage, Cache: cache}, nil
+
+	return &App{Port: port, Hasher: hasher, Storage: storage, Cache: cache, SiteBuilder: siteBuilder}, nil
 }
 
 func (app *App) ListenAndServe() {

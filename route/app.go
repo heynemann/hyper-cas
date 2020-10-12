@@ -23,7 +23,7 @@ func getStorage(storageType storage.StorageType) (storage.Storage, error) {
 	case storage.Memory:
 		return storage.NewMemStorage()
 	case storage.FileSystem:
-		return storage.NewFSStorage()
+		return storage.NewFSStorage(nil)
 	}
 
 	return nil, fmt.Errorf("No storage could be found for storage type %v", storageType)

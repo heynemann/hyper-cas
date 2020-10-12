@@ -2,22 +2,44 @@ package storage
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/heynemann/hyper-cas/sitebuilder"
 	"github.com/juju/fslock"
 	"github.com/spf13/viper"
 )
 
 type FSStorage struct {
-	rootPath string
+	rootPath    string
+	sitesPath   string
+	siteBuilder sitebuilder.SiteBuilder
 }
 
-func NewFSStorage() (*FSStorage, error) {
+func NewFSStorage(siteBuilder sitebuilder.SiteBuilder) (*FSStorage, error) {
 	rootPath := viper.GetString("storage.rootPath")
-	return &FSStorage{rootPath: rootPath}, nil
+	sitesPath := viper.GetString("storage.sitesPath")
+
+	err := os.MkdirAll(rootPath, os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+	err = os.MkdirAll(sitesPath, os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+
+	return &FSStorage{
+		rootPath:    rootPath,
+		sitesPath:   sitesPath,
+		siteBuilder: siteBuilder,
+	}, nil
 }
 
 func fileExists(filename string) bool {
@@ -26,6 +48,38 @@ func fileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func symlink(filePath, symlinkPath string) error {
+	// symlinkPathTmp := symlinkPath + ".tmp"
+	// if err := os.Remove(symlinkPathTmp); err != nil && !os.IsNotExist(err) {
+	// return err
+	// }
+
+	// if err := os.Symlink(filePath, symlinkPathTmp); err != nil {
+	// return err
+	// }
+	fileRelPath, err := filepath.Rel(path.Dir(symlinkPath), filePath)
+	if err != nil {
+		return fmt.Errorf("Failed to find relative path between %s and %s: %v", path.Dir(filePath), symlinkPath, err)
+	}
+
+	cmd := exec.Command("ln", "-sf", fileRelPath, path.Base(symlinkPath))
+	cmd.Dir = path.Dir(symlinkPath)
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		return err
+	}
+
+	// if err := os.Rename(symlinkPathTmp, symlinkPath); err != nil {
+	// return err
+	// }
+	return nil
+}
+
+func (st *FSStorage) filePath(hash string) string {
+	fileDir := path.Join(st.rootPath, "files", hash[0:2], hash[2:4])
+	return path.Join(fileDir, hash)
 }
 
 func (st *FSStorage) Store(hash string, value []byte) error {
@@ -74,29 +128,25 @@ func (st *FSStorage) Has(hash string) bool {
 	return fileExists(filePath)
 }
 
+func splitFile(hash string) (string, string) {
+	v := strings.Split(hash, ":")
+	return v[0], v[1]
+}
+
 func (st *FSStorage) StoreDistro(root string, hashes []string) error {
-	contents, err := json.Marshal(hashes)
-	if err != nil {
-		return nil
-	}
-	fileDir := path.Join(st.rootPath, "distros", root[0:2], root[2:4])
-	filePath := path.Join(fileDir, root)
-
-	err = os.MkdirAll(fileDir, os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	lock := fslock.New(filePath)
-	err = lock.LockWithTimeout(time.Millisecond * 100)
-	if err != nil {
-		return err
-	}
-	defer lock.Unlock()
-
-	err = ioutil.WriteFile(filePath, contents, 0644)
-	if err != nil {
-		return err
+	for _, item := range hashes {
+		filename, hash := splitFile(item)
+		filePath := st.filePath(hash)
+		symlinkPath := path.Join(st.sitesPath, root, filename)
+		symlinkDir := path.Dir(symlinkPath)
+		err := os.MkdirAll(symlinkDir, os.ModePerm)
+		if err != nil {
+			return err
+		}
+		err = symlink(filePath, symlinkPath)
+		if err != nil {
+			return fmt.Errorf("Error creating symlink between %s and %s: %v", filePath, symlinkPath, err)
+		}
 	}
 
 	return nil
@@ -131,22 +181,38 @@ func (st *FSStorage) HasDistro(hash string) bool {
 }
 
 func (st *FSStorage) StoreLabel(label, hash string) error {
-	fileDir := path.Join(st.rootPath, "labels")
-	filePath := path.Join(fileDir, label)
+	// fileDir := path.Join(st.rootPath, "labels")
+	// filePath := path.Join(fileDir, label)
 
-	err := os.MkdirAll(fileDir, os.ModePerm)
+	// err := os.MkdirAll(fileDir, os.ModePerm)
+	// if err != nil {
+	// return err
+	// }
+
+	// lock := fslock.New(filePath)
+	// err = lock.LockWithTimeout(time.Millisecond * 100)
+	// if err != nil {
+	// return err
+	// }
+	// defer lock.Unlock()
+
+	// err = ioutil.WriteFile(filePath, []byte(hash), 0644)
+	// if err != nil {
+	// return err
+	// }
+	conf, err := st.siteBuilder.Generate(label, hash)
 	if err != nil {
 		return err
 	}
-
-	lock := fslock.New(filePath)
+	confPath := path.Join(st.sitesPath, fmt.Sprintf("%s.conf", label))
+	lock := fslock.New(confPath)
 	err = lock.LockWithTimeout(time.Millisecond * 100)
 	if err != nil {
 		return err
 	}
 	defer lock.Unlock()
 
-	err = ioutil.WriteFile(filePath, []byte(hash), 0644)
+	err = ioutil.WriteFile(confPath, []byte(conf), 0644)
 	if err != nil {
 		return err
 	}

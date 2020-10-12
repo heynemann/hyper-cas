@@ -1,9 +1,13 @@
 storage:
   type: file
   rootPath: /tmp/hyper-cas/storage
+  sitesPath: /tmp/hyper-cas/sites
+
 cache:
   maxSizeBytes: 104857600 # 100mb
 
 distroExtractors:
   - subdomain
   - path
+
+# gzipSourceFiles: false
