@@ -1,8 +1,7 @@
 package content
 
 import (
-	"crypto"
-	"crypto/sha256"
+	"crypto/sha1"
 	"fmt"
 	"strings"
 	"testing"
@@ -11,7 +10,7 @@ import (
 )
 
 func sha(content ...[]byte) []byte {
-	h := sha256.New()
+	h := sha1.New()
 	for _, hash := range content {
 		h.Write(hash)
 	}
@@ -33,7 +32,7 @@ func TestTreeWithData(t *testing.T) {
 	}
 	content := sb.String()
 
-	tree, err := NewTreeWithData([]byte(content), 1024, crypto.SHA256)
+	tree, err := NewTreeWithData([]byte(content), 1024)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, tree)
@@ -53,7 +52,7 @@ func TestTreeWithDataIrregular(t *testing.T) {
 	}
 	content := sb.String()
 
-	tree, err := NewTreeWithData([]byte(content), 1024, crypto.SHA256)
+	tree, err := NewTreeWithData([]byte(content), 1024)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, tree)
@@ -81,7 +80,7 @@ func TestTreeWithHashes(t *testing.T) {
 		{"test2", hash2},
 		{"test3", hash3},
 		{"test4", hash4},
-	}, crypto.SHA256)
+	})
 
 	assert.Nil(t, err)
 	assert.NotNil(t, tree)
@@ -114,6 +113,6 @@ func BenchmarkBigTree(b *testing.B) {
 	}
 
 	for n := 0; n < b.N; n++ {
-		NewTreeWithHashes(items, crypto.SHA256)
+		NewTreeWithHashes(items)
 	}
 }
