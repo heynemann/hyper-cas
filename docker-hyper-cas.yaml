@@ -1,6 +1,6 @@
 storage:
-  rootPath: /tmp/hyper-cas/storage
-  sitesPath: /tmp/hyper-cas/sites
+  rootPath: /app/storage
+  sitesPath: /app/sites
 
 gzipSourceFiles: false
 

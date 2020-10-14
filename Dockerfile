@@ -12,6 +12,8 @@ RUN go build -o /app/build/hyper-cas
 
 # This results in a single layer image
 FROM scratch
+COPY docker-hyper-cas.yaml /app/hyper-cas.yaml
 COPY --from=build /app/build/hyper-cas /app/hyper-cas
-ENTRYPOINT ["/app/hyper-cas"]
-CMD ["--help"]
+WORKDIR /app
+ENTRYPOINT ["hyper-cas"]
+CMD [" serve --config hyper-cas.yaml"]

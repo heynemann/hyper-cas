@@ -20,3 +20,6 @@ build:
 
 test:
 	@go test ./...
+
+docker:
+	@docker build -t hyper-cas .
