@@ -9,12 +9,13 @@ import (
 )
 
 type NginxSiteBuilder struct {
-	sitesPath string
-	template  *template.Template
+	serverName string
+	sitesPath  string
+	template   *template.Template
 }
 
 func (sb *NginxSiteBuilder) Generate(label, root string) (string, error) {
-	serverName := fmt.Sprintf("%s.hyper-cas.org", label)
+	serverName := fmt.Sprintf("%s.%s", label, sb.serverName)
 
 	data := struct {
 		RootPath   string
@@ -54,12 +55,14 @@ server {
 
 func NewNginxSiteBuilder() (*NginxSiteBuilder, error) {
 	sitesPath := viper.GetString("storage.sitesPath")
+	serverName := viper.GetString("nginx.serverName")
 	tmpl, err := getConfTemplate()
 	if err != nil {
 		return nil, err
 	}
 	return &NginxSiteBuilder{
-		sitesPath: sitesPath,
-		template:  tmpl,
+		sitesPath:  sitesPath,
+		serverName: serverName,
+		template:   tmpl,
 	}, nil
 }

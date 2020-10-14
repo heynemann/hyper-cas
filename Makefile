@@ -4,7 +4,6 @@ serve:
 		@go run main.go serve --config hyper-cas.yaml
 
 route:
-		# @go run main.go route --config hyper-cas.yaml
 		@docker run -v "`pwd`/route-nginx.conf:/etc/nginx/nginx.conf" -v "/tmp/hyper-cas:/app" -v "/tmp/hyper-cas/sites:/etc/nginx/conf.d" -p 80:80 -it nginx:latest
 
 route-daemon:
