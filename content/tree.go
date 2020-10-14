@@ -1,8 +1,9 @@
 package content
 
 import (
-	"github.com/heynemann/hyper-cas/utils"
 	"math"
+
+	"github.com/vtex/hyper-cas/utils"
 )
 
 const REPEATHASH string = "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"

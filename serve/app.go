@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/heynemann/hyper-cas/sitebuilder"
-	"github.com/heynemann/hyper-cas/storage"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
+	"github.com/vtex/hyper-cas/sitebuilder"
+	"github.com/vtex/hyper-cas/storage"
 )
 
 type App struct {

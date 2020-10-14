@@ -1,5 +1,5 @@
 /*
-Copyright © 2020 Bernardo Heynemann <heynemann@gmail.com>
+Copyright © 2020 VTEX<opensource@vtex.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/heynemann/hyper-cas/cmd"
+import "github.com/vtex/hyper-cas/cmd"
 
 func main() {
 	cmd.Execute()

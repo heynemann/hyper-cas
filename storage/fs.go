@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/heynemann/hyper-cas/sitebuilder"
 	"github.com/juju/fslock"
 	"github.com/spf13/viper"
+	"github.com/vtex/hyper-cas/sitebuilder"
 )
 
 type FSStorage struct {

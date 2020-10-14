@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/heynemann/hyper-cas/utils"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/spf13/viper"
+	"github.com/vtex/hyper-cas/utils"
 )
 
 type FileHandler struct {

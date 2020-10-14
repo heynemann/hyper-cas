@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/heynemann/hyper-cas/serve"
-	"github.com/heynemann/hyper-cas/storage"
 	"github.com/spf13/cobra"
+	"github.com/vtex/hyper-cas/serve"
+	"github.com/vtex/hyper-cas/storage"
 )
 
 var servePort int

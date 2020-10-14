@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/heynemann/hyper-cas/content"
 	routing "github.com/qiangxue/fasthttp-routing"
+	"github.com/vtex/hyper-cas/content"
 )
 
 type DistroHandler struct {
