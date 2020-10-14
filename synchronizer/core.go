@@ -1,7 +1,7 @@
 package synchronizer
 
 import (
-	"crypto/sha256"
+	"crypto/sha1"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -76,7 +76,7 @@ func NewSync(root string) *Sync {
 }
 
 func (s *Sync) UploadFile(path, content string) (string, error) {
-	hashBytes := sha256.Sum256([]byte(content))
+	hashBytes := sha1.Sum([]byte(content))
 	hash := fmt.Sprintf("%x", hashBytes)
 	status, body := doReq("HEAD", fmt.Sprintf("http://localhost:2485/file/%s", hash), "")
 	if status == 200 {
