@@ -1,7 +1,7 @@
 package content
 
 import (
-	"crypto"
+	"github.com/heynemann/hyper-cas/utils"
 	"math"
 )
 
@@ -28,29 +28,25 @@ type Tree struct {
 	Depth     int
 	Size      int
 	LeafCount int
-	Hasher    crypto.Hash
 }
 
 func (t *Tree) newNode(content []byte, isLeaf bool) *Node {
-	hash := t.Hasher.New()
-	hash.Write(content)
+	hash := utils.HashBytes(content)
 	return &Node{
 		Content:  content,
 		IsLeaf:   isLeaf,
 		IsRepeat: false,
-		Hash:     hash.Sum(nil),
+		Hash:     hash,
 	}
 }
 
 func (t *Tree) newRepeatNode() *Node {
-	h := t.Hasher.New()
-	h.Write([]byte(REPEATCONTENT))
-
+	hash := utils.Hash(REPEATCONTENT)
 	return &Node{
 		Content:  []byte(REPEATCONTENT),
 		IsLeaf:   true,
 		IsRepeat: true,
-		Hash:     h.Sum(nil),
+		Hash:     hash,
 	}
 }
 
@@ -72,11 +68,11 @@ func (t *Tree) initTree(depth, size, nodeCount, leafCount int) error {
 	return nil
 }
 
-func (t *Tree) rebuildFromData(data []byte, leafSize int, hasher crypto.Hash) error {
+func (t *Tree) rebuildFromData(data []byte, leafSize int) error {
 	size := int(math.Ceil(float64(len(data)) / float64(leafSize)))
 	depth, nodeCount, leafCount := t.calculateTreeDimensions(size)
 	t.initTree(depth, size, nodeCount, leafCount)
-	err := t.buildLeavesWithData(data, leafSize, hasher)
+	err := t.buildLeavesWithData(data, leafSize)
 	if err != nil {
 		return err
 	}
@@ -103,15 +99,7 @@ func (t *Tree) rebuildFromHashes(data []NodeItem) error {
 	return nil
 }
 
-func (t *Tree) Hash(data ...[]byte) ([]byte, error) {
-	h := t.Hasher.New()
-	for _, d := range data {
-		h.Write(d)
-	}
-	return h.Sum(nil), nil
-}
-
-func (t *Tree) buildLeavesWithData(data []byte, leafSize int, hasher crypto.Hash) error {
+func (t *Tree) buildLeavesWithData(data []byte, leafSize int) error {
 	for i := 0; i < t.LeafCount; i++ {
 		if i*leafSize >= len(data) {
 			t.Nodes[i] = t.newRepeatNode()
@@ -131,12 +119,13 @@ func (t *Tree) buildLeavesWithData(data []byte, leafSize int, hasher crypto.Hash
 func (t *Tree) buildLeavesWithMap(data []NodeItem) error {
 	itemCount := 0
 	for _, item := range data {
-		h := t.Hasher.New()
-		h.Write([]byte(item.Key))
-		h.Write([]byte(":"))
-		h.Write(item.Hash)
+		hash := utils.HashBytes(
+			[]byte(item.Key),
+			[]byte(":"),
+			item.Hash,
+		)
 		t.Nodes[itemCount] = &Node{
-			Hash:     h.Sum(nil),
+			Hash:     hash,
 			Content:  nil,
 			IsLeaf:   true,
 			IsRepeat: false,
@@ -159,10 +148,7 @@ func (t *Tree) buildParents() error {
 		left := t.Nodes[leftIndex]
 		rightIndex := len(t.Nodes) - (depth*2 + 1) - 1
 		right := t.Nodes[rightIndex]
-		hash, err := t.Hash(left.Hash, right.Hash)
-		if err != nil {
-			return err
-		}
+		hash := utils.HashBytes(left.Hash, right.Hash)
 		t.Nodes[i] = &Node{
 			IsLeaf:   false,
 			IsRepeat: false,
@@ -187,18 +173,14 @@ func (t *Tree) Leaves() []*Node {
 	return t.Nodes[0:t.Size]
 }
 
-func NewTreeWithData(data []byte, leafSize int, hasher crypto.Hash) (*Tree, error) {
-	t := &Tree{
-		Hasher: hasher,
-	}
-	t.rebuildFromData(data, leafSize, hasher)
+func NewTreeWithData(data []byte, leafSize int) (*Tree, error) {
+	t := &Tree{}
+	t.rebuildFromData(data, leafSize)
 	return t, nil
 }
 
-func NewTreeWithHashes(data []NodeItem, hasher crypto.Hash) (*Tree, error) {
-	t := &Tree{
-		Hasher: hasher,
-	}
+func NewTreeWithHashes(data []NodeItem) (*Tree, error) {
+	t := &Tree{}
 	t.rebuildFromHashes(data)
 	return t, nil
 }

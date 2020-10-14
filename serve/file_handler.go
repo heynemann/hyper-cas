@@ -21,10 +21,7 @@ func NewFileHandler(app *App) *FileHandler {
 
 func (handler *FileHandler) handlePut(ctx *routing.Context) error {
 	value := ctx.Request.Body()
-	hash, err := handler.App.Hasher.Calc(value)
-	if err != nil {
-		return err
-	}
+	hash := utils.HashBytes(value)
 	strHash := fmt.Sprintf("%x", hash)
 	if viper.GetBool("gzipSourceFiles") {
 		var err error
@@ -33,11 +30,7 @@ func (handler *FileHandler) handlePut(ctx *routing.Context) error {
 			return err
 		}
 	}
-	err = handler.App.Storage.Store(strHash, value)
-	if err != nil {
-		return err
-	}
-	err = handler.App.Cache.Set(strHash, value)
+	err := handler.App.Storage.Store(strHash, value)
 	if err != nil {
 		return err
 	}
@@ -66,18 +59,7 @@ func writeContents(ctx *routing.Context, contents []byte) error {
 
 func (handler *FileHandler) handleGet(ctx *routing.Context) error {
 	hash := ctx.Param("hash")
-	cached, err := handler.App.Cache.Get(hash)
-	if err != nil {
-		return err
-	}
-	if cached != nil {
-		return writeContents(ctx, cached)
-	}
 	contents, err := handler.App.Storage.Get(hash)
-	if err != nil {
-		return err
-	}
-	err = handler.App.Cache.Set(hash, contents)
 	if err != nil {
 		return err
 	}

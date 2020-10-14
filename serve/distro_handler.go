@@ -3,8 +3,6 @@ package serve
 import (
 	"bufio"
 	"bytes"
-	"crypto"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -38,7 +36,7 @@ func (handler *DistroHandler) handlePut(ctx *routing.Context) error {
 		contents = append(contents, fmt.Sprintf("%s:%s", parts[0], parts[1]))
 	}
 
-	tree, err := content.NewTreeWithHashes(items, crypto.SHA256)
+	tree, err := content.NewTreeWithHashes(items)
 	if err != nil {
 		return err
 	}
@@ -50,42 +48,5 @@ func (handler *DistroHandler) handlePut(ctx *routing.Context) error {
 	}
 	ctx.SetBody([]byte(hash))
 
-	return nil
-}
-
-func (handler *DistroHandler) handleGet(ctx *routing.Context) error {
-	hash := ctx.Param("hash")
-	cached, err := handler.App.Cache.Get(hash)
-	if err != nil {
-		return err
-	}
-	if cached != nil {
-		ctx.SetBody(cached)
-		return nil
-	}
-	contents, err := handler.App.Storage.GetDistro(hash)
-	if err != nil {
-		return err
-	}
-	body, err := json.Marshal(contents)
-	if err != nil {
-		return err
-	}
-	err = handler.App.Cache.Set(hash, body)
-	if err != nil {
-		return err
-	}
-	ctx.SetBody(body)
-	return nil
-}
-
-func (handler *DistroHandler) handleHead(ctx *routing.Context) error {
-	hash := ctx.Param("hash")
-
-	if has := handler.App.Storage.HasDistro(hash); has {
-		ctx.SetStatusCode(200)
-	} else {
-		ctx.SetStatusCode(404)
-	}
 	return nil
 }

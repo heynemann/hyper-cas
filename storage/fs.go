@@ -181,31 +181,30 @@ func (st *FSStorage) HasDistro(hash string) bool {
 }
 
 func (st *FSStorage) StoreLabel(label, hash string) error {
-	// fileDir := path.Join(st.rootPath, "labels")
-	// filePath := path.Join(fileDir, label)
+	filePath := path.Join(st.rootPath, "labels", label)
+	err := os.MkdirAll(path.Dir(filePath), os.ModePerm)
+	if err != nil {
+		return err
+	}
 
-	// err := os.MkdirAll(fileDir, os.ModePerm)
-	// if err != nil {
-	// return err
-	// }
+	lock := fslock.New(filePath)
+	err = lock.LockWithTimeout(time.Millisecond * 100)
+	if err != nil {
+		return err
+	}
+	defer lock.Unlock()
 
-	// lock := fslock.New(filePath)
-	// err = lock.LockWithTimeout(time.Millisecond * 100)
-	// if err != nil {
-	// return err
-	// }
-	// defer lock.Unlock()
-
-	// err = ioutil.WriteFile(filePath, []byte(hash), 0644)
-	// if err != nil {
-	// return err
-	// }
+	err = ioutil.WriteFile(filePath, []byte(hash), 0644)
+	if err != nil {
+		return err
+	}
 	conf, err := st.siteBuilder.Generate(label, hash)
 	if err != nil {
 		return err
 	}
+
 	confPath := path.Join(st.sitesPath, fmt.Sprintf("%s.conf", label))
-	lock := fslock.New(confPath)
+	lock = fslock.New(confPath)
 	err = lock.LockWithTimeout(time.Millisecond * 100)
 	if err != nil {
 		return err

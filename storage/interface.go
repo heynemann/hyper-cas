@@ -3,8 +3,7 @@ package storage
 type StorageType int
 
 const (
-	Memory StorageType = iota
-	FileSystem
+	FileSystem StorageType = iota
 )
 
 type Storage interface {

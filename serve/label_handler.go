@@ -29,19 +29,7 @@ func (handler *LabelHandler) handlePut(ctx *routing.Context) error {
 
 func (handler *LabelHandler) handleGet(ctx *routing.Context) error {
 	label := ctx.Param("label")
-	cached, err := handler.App.Cache.Get(label)
-	if err != nil {
-		return err
-	}
-	if cached != nil {
-		ctx.SetBody(cached)
-		return nil
-	}
 	contents, err := handler.App.Storage.GetLabel(label)
-	if err != nil {
-		return err
-	}
-	err = handler.App.Cache.Set(label, []byte(contents))
 	if err != nil {
 		return err
 	}
