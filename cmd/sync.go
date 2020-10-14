@@ -25,6 +25,7 @@ import (
 )
 
 var syncLabel string
+var syncURL string
 
 func folderExists(path string) bool {
 	info, err := os.Stat(path)
@@ -51,7 +52,7 @@ var syncCmd = &cobra.Command{
 		if !folderExists(folder) {
 			panic(fmt.Sprintf("Folder %s does not exist!", folder))
 		}
-		s := synchronizer.NewSync(folder)
+		s := synchronizer.NewSync(folder, syncURL)
 		_, err = s.Run(syncLabel)
 		if err != nil {
 			panic(err)
@@ -62,4 +63,5 @@ var syncCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(syncCmd)
 	syncCmd.Flags().StringVarP(&syncLabel, "label", "l", "", "Label to apply to this new distribution")
+	syncCmd.Flags().StringVarP(&syncURL, "api-url", "a", "http://localhost:2485/", "Hyper-CAS API URL")
 }

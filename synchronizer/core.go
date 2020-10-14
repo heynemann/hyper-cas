@@ -4,7 +4,9 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -14,28 +16,7 @@ import (
 
 type Sync struct {
 	rootDir string
-}
-
-func doReq(method, url, body string) (int, string) {
-	req := fasthttp.AcquireRequest()
-	resp := fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseRequest(req)   // <- do not forget to release
-	defer fasthttp.ReleaseResponse(resp) // <- do not forget to release
-
-	req.Header.SetMethodBytes([]byte(method))
-	req.SetRequestURI(url)
-	if body != "" {
-		req.SetBodyString(body)
-	}
-
-	err := fasthttp.Do(req, resp)
-	if err != nil {
-		return 500, fmt.Sprintf("%s for %s failed with %v.", method, url, err)
-	}
-
-	status := resp.StatusCode()
-	bodyBytes := resp.Body()
-	return status, string(bodyBytes)
+	apiURL  string
 }
 
 func readAll(path string) (string, error) {
@@ -71,19 +52,47 @@ func listFiles(path string) ([]string, []string, error) {
 	return files, contents, err
 }
 
-func NewSync(root string) *Sync {
-	return &Sync{rootDir: root}
+func NewSync(root, apiURL string) *Sync {
+	return &Sync{rootDir: root, apiURL: apiURL}
+}
+
+func (s *Sync) doReq(method, reqUrl, body string) (int, string) {
+	u, err := url.Parse(s.apiURL)
+	if err != nil {
+		return 500, fmt.Sprintf("Invalid URL %s", s.apiURL)
+	}
+	u.Path = path.Join(u.Path, reqUrl)
+	req := fasthttp.AcquireRequest()
+	resp := fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseRequest(req)   // <- do not forget to release
+	defer fasthttp.ReleaseResponse(resp) // <- do not forget to release
+
+	req.Header.SetMethodBytes([]byte(method))
+	req.SetRequestURI(u.String())
+	if body != "" {
+		req.SetBodyString(body)
+	}
+
+	err = fasthttp.Do(req, resp)
+	if err != nil {
+		return 500, fmt.Sprintf("%s for %s failed with %v.", method, reqUrl, err)
+	}
+
+	status := resp.StatusCode()
+	bodyBytes := resp.Body()
+	return status, string(bodyBytes)
 }
 
 func (s *Sync) UploadFile(path, content string) (string, error) {
 	hashBytes := sha1.Sum([]byte(content))
 	hash := fmt.Sprintf("%x", hashBytes)
-	status, body := doReq("HEAD", fmt.Sprintf("http://localhost:2485/file/%s", hash), "")
+	fileURL := fmt.Sprintf("/file/%s", hash)
+	status, body := s.doReq("HEAD", fileURL, "")
 	if status == 200 {
 		fmt.Printf("* %s - Already up-to-date.\n", path)
 		return hash, nil
 	}
-	status, body = doReq("PUT", "http://localhost:2485/file", content)
+	status, body = s.doReq("PUT", "/file", content)
 	if status != 200 {
 		return "", fmt.Errorf("Failed to put %s. Status: %d Error: %s", path, status, body)
 	}
@@ -105,7 +114,7 @@ func (s *Sync) UploadDistro(hashes map[string]string) (string, error) {
 		sb.WriteString("\n")
 	}
 	content := sb.String()
-	status, body := doReq("PUT", "http://localhost:2485/distro", content)
+	status, body := s.doReq("PUT", "/distro", content)
 	if status != 200 {
 		return "", fmt.Errorf("Failed to put new distro. Status: %d Error: %s", status, body)
 	}
@@ -114,7 +123,7 @@ func (s *Sync) UploadDistro(hashes map[string]string) (string, error) {
 }
 
 func (s *Sync) SetLabel(label, hash string) error {
-	status, body := doReq("PUT", "http://localhost:2485/label", fmt.Sprintf("label=%s&hash=%s", label, hash))
+	status, body := s.doReq("PUT", "/label", fmt.Sprintf("label=%s&hash=%s", label, hash))
 	if status != 200 {
 		return fmt.Errorf("Failed to put new distro. Status: %d Error: %s", status, body)
 	}
