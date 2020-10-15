@@ -1,6 +1,6 @@
 # hyper-cas
 
-hyper-cas is a Content-Adressable Storage aimed at JAMStack websites.
+hyper-cas is a Content-Addressable Storage aimed at JAMStack websites.
 
 ## Usage - hyper-cas API
 
