@@ -8,12 +8,12 @@ RUN apk add --no-cache git gcc libc-dev
 # These layers are only re-built when Gopkg files are updated
 COPY . /app
 WORKDIR /app
-RUN go build -o /app/build/hyper-cas
+RUN GOOS=linux CGO_ENABLED=0 go build -o /app/build/hyper-cas main.go
 
 # This results in a single layer image
-FROM scratch
-COPY docker-hyper-cas.yaml /app/hyper-cas.yaml
+FROM alpine:3.7
+COPY ./docker-hyper-cas.yaml /app/hyper-cas.yaml
 COPY --from=build /app/build/hyper-cas /app/hyper-cas
 WORKDIR /app
-ENTRYPOINT ["hyper-cas"]
-CMD [" serve --config hyper-cas.yaml"]
+ENTRYPOINT ["/app/hyper-cas"]
+CMD ["--config", "/app/hyper-cas.yaml", "serve"]
