@@ -13,6 +13,7 @@ import (
 var syncLabel string
 var syncURL string
 var syncJson bool
+var syncRetries int
 
 func folderExists(path string) bool {
 	info, err := os.Stat(path)
@@ -40,10 +41,19 @@ var syncCmd = &cobra.Command{
 			panic(fmt.Sprintf("Folder %s does not exist!", folder))
 		}
 		s := synchronizer.NewSync(folder, syncURL)
-		result, err := s.Run(syncLabel)
-		if err != nil {
-			panic(err)
+		var result map[string]interface{}
+		retries := 0
+		for i := 0; i <= syncRetries; i++ {
+			result, err = s.Run(syncLabel)
+			if err == nil {
+				break
+			}
+			retries += 1
 		}
+		if result == nil {
+			panic(fmt.Errorf("Failed to synchronize folder: %v", err))
+		}
+		result["retries"] = retries
 		if syncJson {
 			res, err := json.Marshal(result)
 			if err != nil {
@@ -61,9 +71,11 @@ func init() {
 	syncCmd.Flags().StringVarP(&syncLabel, "label", "l", "", "Label to apply to this new distribution")
 	syncCmd.Flags().StringVarP(&syncURL, "api-url", "a", "http://localhost:2485/", "Hyper-CAS API URL")
 	syncCmd.Flags().BoolVarP(&syncJson, "json", "j", false, "Whether to output JSON serialization")
+	syncCmd.Flags().IntVarP(&syncRetries, "retries", "r", 3, "Number of times to retry synchronizing")
 }
 
 func printResult(result map[string]interface{}) {
+	fmt.Printf("Completed synchronizing with %d retries.\n", result["retries"].(int))
 	for _, file := range result["files"].([]map[string]interface{}) {
 		isUpToDate := file["upToDate"].(bool)
 		path := file["path"].(string)
