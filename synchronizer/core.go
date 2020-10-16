@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/valyala/fasthttp"
 )
@@ -83,21 +84,19 @@ func (s *Sync) doReq(method, reqUrl, body string) (int, string) {
 	return status, string(bodyBytes)
 }
 
-func (s *Sync) UploadFile(path, content string) (string, error) {
+func (s *Sync) UploadFile(path, content string) (string, bool, error) {
 	hashBytes := sha1.Sum([]byte(content))
 	hash := fmt.Sprintf("%x", hashBytes)
 	fileURL := fmt.Sprintf("/file/%s", hash)
 	status, body := s.doReq("HEAD", fileURL, "")
 	if status == 200 {
-		fmt.Printf("* %s - Already up-to-date.\n", path)
-		return hash, nil
+		return hash, true, nil
 	}
 	status, body = s.doReq("PUT", "/file", content)
 	if status != 200 {
-		return "", fmt.Errorf("Failed to put %s. Status: %d Error: %s", path, status, body)
+		return "", false, fmt.Errorf("Failed to put %s. Status: %d Error: %s", path, status, body)
 	}
-	fmt.Printf("* %s - Updated (hash: %s).\n", path, body)
-	return body, nil
+	return body, false, nil
 }
 
 func (s *Sync) UploadDistro(hashes map[string]string) (string, error) {
@@ -118,7 +117,6 @@ func (s *Sync) UploadDistro(hashes map[string]string) (string, error) {
 	if status != 200 {
 		return "", fmt.Errorf("Failed to put new distro. Status: %d Error: %s", status, body)
 	}
-	fmt.Printf("* Distro %s is up-to-date.\n", body)
 	return body, nil
 }
 
@@ -127,34 +125,52 @@ func (s *Sync) SetLabel(label, hash string) error {
 	if status != 200 {
 		return fmt.Errorf("Failed to put new distro. Status: %d Error: %s", status, body)
 	}
-	fmt.Printf("* Updated label %s => %s.\n", label, hash)
 	return nil
 
 }
 
-func (s *Sync) Run(label string) (string, error) {
+func (s *Sync) Run(label string) (map[string]interface{}, error) {
 	files, contents, err := listFiles(s.rootDir)
 	if err != nil {
 		panic(err)
 	}
+	result := map[string]interface{}{
+		"timestamp": int32(time.Now().Unix()),
+		"files":     []map[string]interface{}{},
+		"distro":    map[string]interface{}{},
+		"label":     map[string]interface{}{},
+	}
 	hashes := map[string]string{}
 	for i, path := range files {
 		content := contents[i]
-		hash, err := s.UploadFile(path, content)
+		hash, isUpToDate, err := s.UploadFile(path, content)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		hashes[path] = hash
+		result["files"] = append(result["files"].([]map[string]interface{}), map[string]interface{}{
+			"path":     path,
+			"hash":     hash,
+			"upToDate": isUpToDate,
+		})
 	}
 	distro, err := s.UploadDistro(hashes)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+	result["distro"] = map[string]interface{}{
+		"hash": distro,
 	}
 	if label != "" {
 		err = s.SetLabel(label, distro)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 	}
-	return distro, nil
+	result["label"] = map[string]interface{}{
+		"label": label,
+		"hash":  distro,
+	}
+
+	return result, nil
 }
