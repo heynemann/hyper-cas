@@ -134,6 +134,24 @@ func splitFile(hash string) (string, string) {
 }
 
 func (st *FSStorage) StoreDistro(root string, hashes []string) error {
+	filePath := path.Join(st.rootPath, "distros", root)
+	err := os.MkdirAll(path.Dir(filePath), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	lock := fslock.New(filePath)
+	err = lock.LockWithTimeout(time.Millisecond * 100)
+	if err != nil {
+		return err
+	}
+	defer lock.Unlock()
+
+	err = ioutil.WriteFile(filePath, []byte(""), 0644)
+	if err != nil {
+		return err
+	}
+
 	for _, item := range hashes {
 		filename, hash := splitFile(item)
 		filePath := st.filePath(hash)
@@ -204,12 +222,12 @@ func (st *FSStorage) StoreLabel(label, hash string) error {
 	}
 
 	confPath := path.Join(st.sitesPath, fmt.Sprintf("%s.conf", label))
-	lock = fslock.New(confPath)
-	err = lock.LockWithTimeout(time.Millisecond * 100)
+	lock2 := fslock.New(confPath)
+	err = lock2.LockWithTimeout(time.Millisecond * 100)
 	if err != nil {
 		return err
 	}
-	defer lock.Unlock()
+	defer lock2.Unlock()
 
 	err = ioutil.WriteFile(confPath, []byte(conf), 0644)
 	if err != nil {

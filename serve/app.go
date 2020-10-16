@@ -49,10 +49,15 @@ func (app *App) ListenAndServe() {
 	fileHandler := NewFileHandler(app)
 	distroHandler := NewDistroHandler(app)
 	labelHandler := NewLabelHandler(app)
+
 	router.Put("/file", fileHandler.handlePut)
 	router.Get("/file/<hash>", fileHandler.handleGet)
 	router.Head("/file/<hash>", fileHandler.handleHead)
+
 	router.Put("/distro", distroHandler.handlePut)
+	router.Get("/distro/<distro>", distroHandler.handleGet)
+	router.Head("/distro/<distro>", distroHandler.handleHead)
+
 	router.Put("/label", labelHandler.handlePut)
 	router.Get("/label/<label>", labelHandler.handleGet)
 	router.Head("/label/<label>", labelHandler.handleHead)

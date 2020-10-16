@@ -3,6 +3,7 @@ package serve
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -48,5 +49,29 @@ func (handler *DistroHandler) handlePut(ctx *routing.Context) error {
 	}
 	ctx.SetBody([]byte(hash))
 
+	return nil
+}
+
+func (handler *DistroHandler) handleGet(ctx *routing.Context) error {
+	distro := ctx.Param("distro")
+	contents, err := handler.App.Storage.GetDistro(distro)
+	if err != nil {
+		return err
+	}
+	items, err := json.Marshal(contents)
+	if err != nil {
+		return err
+	}
+	ctx.SetBody(items)
+	return nil
+}
+
+func (handler *DistroHandler) handleHead(ctx *routing.Context) error {
+	distro := ctx.Param("distro")
+	if has := handler.App.Storage.HasLabel(distro); has {
+		ctx.SetStatusCode(200)
+	} else {
+		ctx.SetStatusCode(404)
+	}
 	return nil
 }
