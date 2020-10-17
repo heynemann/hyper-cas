@@ -50,15 +50,15 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func symlink(filePath, symlinkPath string) error {
-	// symlinkPathTmp := symlinkPath + ".tmp"
-	// if err := os.Remove(symlinkPathTmp); err != nil && !os.IsNotExist(err) {
-	// return err
-	// }
+func dirExists(dirName string) bool {
+	info, err := os.Stat(dirName)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return info.IsDir()
+}
 
-	// if err := os.Symlink(filePath, symlinkPathTmp); err != nil {
-	// return err
-	// }
+func symlink(filePath, symlinkPath string) error {
 	fileRelPath, err := filepath.Rel(path.Dir(symlinkPath), filePath)
 	if err != nil {
 		return fmt.Errorf("Failed to find relative path between %s and %s: %v", path.Dir(filePath), symlinkPath, err)
@@ -71,9 +71,6 @@ func symlink(filePath, symlinkPath string) error {
 		return err
 	}
 
-	// if err := os.Rename(symlinkPathTmp, symlinkPath); err != nil {
-	// return err
-	// }
 	return nil
 }
 
@@ -134,6 +131,50 @@ func splitFile(hash string) (string, string) {
 }
 
 func (st *FSStorage) StoreDistro(root string, hashes []string) error {
+	dir := path.Join(st.sitesPath, fmt.Sprintf("temp%s", root))
+	defer func() {
+		if dirExists(dir) {
+			os.RemoveAll(dir)
+		}
+	}()
+	err := st.storeDistroLinks(dir, root, hashes)
+	if err != nil {
+		return err
+	}
+	err = st.storeDistroFile(root)
+	if err != nil {
+		return err
+	}
+
+	finalPath := path.Join(st.sitesPath, root)
+	err = os.Rename(dir, finalPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (st *FSStorage) storeDistroLinks(dir, root string, hashes []string) error {
+	for _, item := range hashes {
+		filename, hash := splitFile(item)
+		filePath := st.filePath(hash)
+		symlinkPath := path.Join(dir, filename)
+		symlinkDir := path.Dir(symlinkPath)
+		err := os.MkdirAll(symlinkDir, os.ModePerm)
+		if err != nil {
+			return err
+		}
+		err = symlink(filePath, symlinkPath)
+		if err != nil {
+			return fmt.Errorf("Error creating symlink between %s and %s: %v", filePath, symlinkPath, err)
+		}
+	}
+
+	return nil
+}
+
+func (st *FSStorage) storeDistroFile(root string) error {
 	filePath := path.Join(st.rootPath, "distros", root)
 	err := os.MkdirAll(path.Dir(filePath), os.ModePerm)
 	if err != nil {
@@ -151,27 +192,11 @@ func (st *FSStorage) StoreDistro(root string, hashes []string) error {
 	if err != nil {
 		return err
 	}
-
-	for _, item := range hashes {
-		filename, hash := splitFile(item)
-		filePath := st.filePath(hash)
-		symlinkPath := path.Join(st.sitesPath, root, filename)
-		symlinkDir := path.Dir(symlinkPath)
-		err := os.MkdirAll(symlinkDir, os.ModePerm)
-		if err != nil {
-			return err
-		}
-		err = symlink(filePath, symlinkPath)
-		if err != nil {
-			return fmt.Errorf("Error creating symlink between %s and %s: %v", filePath, symlinkPath, err)
-		}
-	}
-
 	return nil
 }
 
 func (st *FSStorage) GetDistro(root string) ([]string, error) {
-	filePath := path.Join(st.rootPath, "distros", root[0:2], root[2:4], root)
+	filePath := path.Join(st.rootPath, "distros", root)
 	lock := fslock.New(filePath)
 	err := lock.LockWithTimeout(time.Millisecond * 100)
 	if err != nil {
@@ -193,12 +218,25 @@ func (st *FSStorage) GetDistro(root string) ([]string, error) {
 	return contents, nil
 }
 
-func (st *FSStorage) HasDistro(hash string) bool {
-	filePath := path.Join(st.rootPath, "distros", hash[0:2], hash[2:4], hash)
+func (st *FSStorage) HasDistro(root string) bool {
+	filePath := path.Join(st.rootPath, "distros", root)
 	return fileExists(filePath)
 }
 
 func (st *FSStorage) StoreLabel(label, hash string) error {
+	err := st.storeLabelFile(label, hash)
+	if err != nil {
+		return err
+	}
+	err = st.storeLabelConf(label, hash)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (st *FSStorage) storeLabelFile(label, hash string) error {
 	filePath := path.Join(st.rootPath, "labels", label)
 	err := os.MkdirAll(path.Dir(filePath), os.ModePerm)
 	if err != nil {
@@ -212,29 +250,24 @@ func (st *FSStorage) StoreLabel(label, hash string) error {
 	}
 	defer lock.Unlock()
 
-	err = ioutil.WriteFile(filePath, []byte(hash), 0644)
-	if err != nil {
-		return err
-	}
+	return ioutil.WriteFile(filePath, []byte(hash), 0644)
+}
+
+func (st *FSStorage) storeLabelConf(label, hash string) error {
 	conf, err := st.siteBuilder.Generate(label, hash)
 	if err != nil {
 		return err
 	}
 
 	confPath := path.Join(st.sitesPath, fmt.Sprintf("%s.conf", label))
-	lock2 := fslock.New(confPath)
-	err = lock2.LockWithTimeout(time.Millisecond * 100)
+	lock := fslock.New(confPath)
+	err = lock.LockWithTimeout(time.Millisecond * 100)
 	if err != nil {
 		return err
 	}
-	defer lock2.Unlock()
+	defer lock.Unlock()
 
-	err = ioutil.WriteFile(confPath, []byte(conf), 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return ioutil.WriteFile(confPath, []byte(conf), 0644)
 }
 
 func (st *FSStorage) GetLabel(label string) (string, error) {

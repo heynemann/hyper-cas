@@ -43,11 +43,17 @@ func (handler *DistroHandler) handlePut(ctx *routing.Context) error {
 	}
 	root := tree.Root()
 	hash := fmt.Sprintf("%x", root.Hash)
+
+	if handler.App.Storage.HasDistro(hash) {
+		ctx.SetStatusCode(200)
+		ctx.SetBodyString(hash)
+		return nil
+	}
 	err = handler.App.Storage.StoreDistro(hash, contents)
 	if err != nil {
 		return err
 	}
-	ctx.SetBody([]byte(hash))
+	ctx.SetBodyString(hash)
 
 	return nil
 }
