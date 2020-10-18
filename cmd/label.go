@@ -11,6 +11,7 @@ import (
 var labelName string
 var labelHash string
 var labelRetries int
+var labelURL string
 
 // labelCmd represents the label command
 var labelCmd = &cobra.Command{
@@ -19,9 +20,9 @@ var labelCmd = &cobra.Command{
 	Long:  `set-label will set the specified label to the specified tree hash in hyper-cas`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
-		s := synchronizer.NewSync("", syncURL)
+		s := synchronizer.NewSync("", labelURL)
 		retries := 0
-		for i := 0; i <= syncRetries; i++ {
+		for i := 0; i <= labelRetries; i++ {
 			hasDistro := s.HasDistro(labelHash)
 			if !hasDistro {
 				log.Fatalf("Distribution %s was not found\n", labelHash)
@@ -41,7 +42,8 @@ var labelCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(labelCmd)
+	labelCmd.Flags().StringVarP(&labelURL, "api-url", "a", "http://localhost:2485/", "Hyper-CAS API URL")
 	labelCmd.Flags().StringVarP(&labelName, "name", "n", "", "Label to set the hash of the distribution to")
 	labelCmd.Flags().StringVarP(&labelHash, "hash", "a", "", "Distribution hash to set the label to")
-	labelCmd.Flags().IntVarP(&labelRetries, "retries", "r", 3, "Number of times to retry synchronizing")
+	labelCmd.Flags().IntVarP(&labelRetries, "retries", "r", 3, "Number of times to retry setting the label")
 }
