@@ -1,0 +1,8 @@
+site_name: hyper-cas
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Usage: usage.md
+  - API: api.md
+  - CLI: cli.md
+  - Hacking: hacking.md

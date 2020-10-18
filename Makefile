@@ -1,4 +1,4 @@
-.PHONY: serve route sync-simple build
+.PHONY: serve route sync-simple build docs
 
 serve:
 		@go run main.go serve --config hyper-cas.yaml
@@ -30,3 +30,6 @@ docker:
 push-image: docker
 	@docker tag hyper-cas:latest vtexcom/hyper-cas:latest
 	@docker push vtexcom/hyper-cas:latest
+
+docs:
+	@mkdocs serve
