@@ -69,7 +69,7 @@ var syncCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(syncCmd)
 	syncCmd.Flags().StringVarP(&syncLabel, "label", "l", "", "Label to apply to this new distribution")
-	syncCmd.Flags().StringVarP(&syncURL, "api-url", "a", "http://localhost:2485/", "Hyper-CAS API URL")
+	syncCmd.Flags().StringVarP(&syncURL, "api-url", "u", "http://localhost:2485/", "Hyper-CAS API URL")
 	syncCmd.Flags().BoolVarP(&syncJson, "json", "j", false, "Whether to output JSON serialization")
 	syncCmd.Flags().IntVarP(&syncRetries, "retries", "r", 3, "Number of times to retry synchronizing")
 }
@@ -90,5 +90,8 @@ func printResult(result map[string]interface{}) {
 	fmt.Printf("* Distro %s is up-to-date.\n", distro["hash"].(string))
 
 	label := result["label"].(map[string]interface{})
-	fmt.Printf("* Updated label %s => %s.\n", label["label"].(string), label["hash"].(string))
+	labelName := label["label"].(string)
+	if labelName != "" {
+		fmt.Printf("* Updated label %s => %s.\n", labelName, label["hash"].(string))
+	}
 }

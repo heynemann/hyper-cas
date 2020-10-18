@@ -42,7 +42,7 @@ var labelCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(labelCmd)
-	labelCmd.Flags().StringVarP(&labelURL, "api-url", "a", "http://localhost:2485/", "Hyper-CAS API URL")
+	labelCmd.Flags().StringVarP(&labelURL, "api-url", "u", "http://localhost:2485/", "Hyper-CAS API URL")
 	labelCmd.Flags().StringVarP(&labelName, "name", "n", "", "Label to set the hash of the distribution to")
 	labelCmd.Flags().StringVarP(&labelHash, "hash", "a", "", "Distribution hash to set the label to")
 	labelCmd.Flags().IntVarP(&labelRetries, "retries", "r", 3, "Number of times to retry setting the label")

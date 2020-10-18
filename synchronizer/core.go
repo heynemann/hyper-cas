@@ -142,7 +142,10 @@ func (s *Sync) Run(label string) (map[string]interface{}, error) {
 		"timestamp": int32(time.Now().Unix()),
 		"files":     []map[string]interface{}{},
 		"distro":    map[string]interface{}{},
-		"label":     map[string]interface{}{},
+		"label": map[string]interface{}{
+			"label": "",
+			"hash":  "",
+		},
 	}
 	hashes := map[string]string{}
 	for i, path := range files {
@@ -170,10 +173,10 @@ func (s *Sync) Run(label string) (map[string]interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-	}
-	result["label"] = map[string]interface{}{
-		"label": label,
-		"hash":  distro,
+		result["label"] = map[string]interface{}{
+			"label": label,
+			"hash":  distro,
+		}
 	}
 
 	return result, nil
