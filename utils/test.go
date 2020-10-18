@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -9,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/fasthttp/router"
 	"github.com/spf13/viper"
@@ -47,11 +47,14 @@ func serveRequest(app App, req *http.Request) (*http.Response, error) {
 func DoRequest(app App, method, url, body string) (*http.Response, int, string, error) {
 	var bodyReader io.Reader
 	if method != "GET" && body != "" {
-		bodyReader = bytes.NewBuffer([]byte(body))
+		bodyReader = strings.NewReader(body)
 	}
 	r, err := http.NewRequest(method, fmt.Sprintf("http://localhost/%s", url), bodyReader)
 	if err != nil {
 		return nil, 500, "", err
+	}
+	if method == "POST" || method == "PUT" {
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
 
 	res, err := serveRequest(app, r)

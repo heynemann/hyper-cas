@@ -15,10 +15,10 @@ func NewLabelHandler(app *App) *LabelHandler {
 }
 
 func (handler *LabelHandler) handlePut(ctx *fasthttp.RequestCtx) error {
-	label := string(ctx.FormValue("label"))
-	hash := string(ctx.FormValue("hash"))
+	label := string(ctx.PostArgs().Peek("label"))
+	hash := string(ctx.PostArgs().Peek("hash"))
 	if label == "" || hash == "" {
-		return fmt.Errorf("Both label and hash must be set (label: %s, hash: %s)", label, hash)
+		return fmt.Errorf("Both label and hash must be set (label: '%s', hash: '%s')", label, hash)
 	}
 	err := handler.App.Storage.StoreLabel(label, hash)
 	if err != nil {
@@ -29,6 +29,10 @@ func (handler *LabelHandler) handlePut(ctx *fasthttp.RequestCtx) error {
 
 func (handler *LabelHandler) handleGet(ctx *fasthttp.RequestCtx) error {
 	label := ctx.UserValue("label").(string)
+	if !handler.App.Storage.HasLabel(label) {
+		ctx.SetStatusCode(404)
+		return nil
+	}
 	contents, err := handler.App.Storage.GetLabel(label)
 	if err != nil {
 		return err
