@@ -8,12 +8,11 @@ import (
 	"github.com/vtex/hyper-cas/utils"
 )
 
-func TestHandler(t *testing.T) {
+func TestHealthcheckHandler(t *testing.T) {
 	app, err := NewApp(200, storage.FileSystem)
 	assert.Nil(t, err)
-	handler := NewHealthcheckHandler(app)
 
-	_, status, body, err := utils.DoRequest(app, handler.handleGet, "GET", "http://healthcheck/", "")
+	_, status, body, err := utils.DoRequest(app, "GET", "/healthcheck", "")
 	if err != nil {
 		t.Error(err)
 	}

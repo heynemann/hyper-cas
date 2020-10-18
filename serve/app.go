@@ -54,7 +54,7 @@ func (app *App) HandleError(handler func(ctx *fasthttp.RequestCtx) error) func(c
 	}
 }
 
-func (app *App) ListenAndServe() {
+func (app *App) GetRouter() *router.Router {
 	router := router.New()
 	healthcheckHandler := NewHealthcheckHandler(app)
 	fileHandler := NewFileHandler(app)
@@ -64,17 +64,22 @@ func (app *App) ListenAndServe() {
 	router.GET("/healthcheck", app.HandleError(healthcheckHandler.handleGet))
 
 	router.PUT("/file", app.HandleError(fileHandler.handlePut))
-	router.GET("/file/<hash>", app.HandleError(fileHandler.handleGet))
-	router.HEAD("/file/<hash>", app.HandleError(fileHandler.handleHead))
+	router.GET("/file/{hash}", app.HandleError(fileHandler.handleGet))
+	router.HEAD("/file/{hash}", app.HandleError(fileHandler.handleHead))
 
 	router.PUT("/distro", app.HandleError(distroHandler.handlePut))
-	router.GET("/distro/<distro>", app.HandleError(distroHandler.handleGet))
-	router.HEAD("/distro/<distro>", app.HandleError(distroHandler.handleHead))
+	router.GET("/distro/{distro}", app.HandleError(distroHandler.handleGet))
+	router.HEAD("/distro/{distro}", app.HandleError(distroHandler.handleHead))
 
 	router.PUT("/label", app.HandleError(labelHandler.handlePut))
-	router.GET("/label/<label>", app.HandleError(labelHandler.handleGet))
-	router.HEAD("/label/<label>", app.HandleError(labelHandler.handleHead))
+	router.GET("/label/{label}", app.HandleError(labelHandler.handleGet))
+	router.HEAD("/label/{label}", app.HandleError(labelHandler.handleHead))
 
+	return router
+}
+
+func (app *App) ListenAndServe() {
+	router := app.GetRouter()
 	fmt.Printf("Running hyper-cas API in http://0.0.0.0:%d...\n", app.Port)
 	err := fasthttp.ListenAndServe(fmt.Sprintf(":%d", app.Port), router.Handler)
 	if err != nil {

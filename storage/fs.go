@@ -14,6 +14,7 @@ import (
 	"github.com/juju/fslock"
 	"github.com/spf13/viper"
 	"github.com/vtex/hyper-cas/sitebuilder"
+	"github.com/vtex/hyper-cas/utils"
 )
 
 type FSStorage struct {
@@ -42,22 +43,6 @@ func NewFSStorage(siteBuilder sitebuilder.SiteBuilder) (*FSStorage, error) {
 		sitesPath:   sitesPath,
 		siteBuilder: siteBuilder,
 	}, nil
-}
-
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
-
-func dirExists(dirName string) bool {
-	info, err := os.Stat(dirName)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return info.IsDir()
 }
 
 func symlink(filePath, symlinkPath string) error {
@@ -107,6 +92,9 @@ func (st *FSStorage) Store(hash string, value []byte) error {
 
 func (st *FSStorage) Get(hash string) ([]byte, error) {
 	filePath := path.Join(st.rootPath, "files", hash[0:2], hash[2:4], hash)
+	if !utils.FileExists(filePath) {
+		return nil, fmt.Errorf("File %s was not found!", filePath)
+	}
 	lock := fslock.New(filePath)
 	err := lock.LockWithTimeout(time.Millisecond * 100)
 	if err != nil {
@@ -124,7 +112,7 @@ func (st *FSStorage) Get(hash string) ([]byte, error) {
 
 func (st *FSStorage) Has(hash string) bool {
 	filePath := path.Join(st.rootPath, "files", hash[0:2], hash[2:4], hash)
-	return fileExists(filePath)
+	return utils.FileExists(filePath)
 }
 
 func splitFile(hash string) (string, string) {
@@ -135,7 +123,7 @@ func splitFile(hash string) (string, string) {
 func (st *FSStorage) StoreDistro(root string, hashes []string) error {
 	dir := path.Join(st.sitesPath, fmt.Sprintf("temp%s", root))
 	defer func() {
-		if dirExists(dir) {
+		if utils.DirExists(dir) {
 			os.RemoveAll(dir)
 		}
 	}()
@@ -222,7 +210,7 @@ func (st *FSStorage) GetDistro(root string) ([]string, error) {
 
 func (st *FSStorage) HasDistro(root string) bool {
 	filePath := path.Join(st.rootPath, "distros", root)
-	return fileExists(filePath)
+	return utils.FileExists(filePath)
 }
 
 func (st *FSStorage) StoreLabel(label, hash string) error {
@@ -291,5 +279,5 @@ func (st *FSStorage) GetLabel(label string) (string, error) {
 
 func (st *FSStorage) HasLabel(label string) bool {
 	filePath := path.Join(st.rootPath, "labels", label)
-	return fileExists(filePath)
+	return utils.FileExists(filePath)
 }

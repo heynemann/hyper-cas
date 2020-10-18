@@ -2,8 +2,6 @@ package serve
 
 import (
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
@@ -34,36 +32,22 @@ func (handler *FileHandler) handlePut(ctx *fasthttp.RequestCtx) error {
 	if err != nil {
 		return err
 	}
-	ctx.SetBody([]byte(strHash))
-	return nil
-}
-
-func writeContents(ctx *fasthttp.RequestCtx, contents []byte) error {
-	gzipEnabled := strings.Contains(string(ctx.Request.Header.Peek("Accept-Encoding")), "gzip")
-	ctx.Response.Header.Add("content-type", "text/html; charset=utf-8")
-	ctx.Response.Header.Add("date", time.Now().Format("RFC1123"))
-	ctx.Response.Header.Set("server", "hyper-cas")
-	if gzipEnabled {
-		ctx.Response.Header.Add("content-encoding", "gzip")
-		ctx.SetBody(contents)
-	} else {
-		res, err := utils.Unzip(contents)
-		if err != nil {
-			return err
-		}
-		ctx.SetBody(res)
-	}
-
+	ctx.SetBodyString(strHash)
 	return nil
 }
 
 func (handler *FileHandler) handleGet(ctx *fasthttp.RequestCtx) error {
 	hash := ctx.UserValue("hash").(string)
 	contents, err := handler.App.Storage.Get(hash)
+	if contents == nil {
+		ctx.SetStatusCode(404)
+		return nil
+	}
 	if err != nil {
 		return err
 	}
-	return writeContents(ctx, contents)
+	ctx.SetBody(contents)
+	return nil
 }
 
 func (handler *FileHandler) handleHead(ctx *fasthttp.RequestCtx) error {
