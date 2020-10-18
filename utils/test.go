@@ -8,8 +8,10 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/fasthttp/router"
+	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttputil"
 )
@@ -63,4 +65,10 @@ func DoRequest(app App, method, url, body string) (*http.Response, int, string, 
 	}
 
 	return res, res.StatusCode, string(resBody), nil
+}
+
+func SetTestStorage() {
+	os.RemoveAll("/tmp/hyper-cas-test")
+	viper.Set("storage.rootPath", "/tmp/hyper-cas-test/storage")
+	viper.Set("storage.sitesPath", "/tmp/hyper-cas-test/sites")
 }

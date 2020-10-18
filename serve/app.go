@@ -48,7 +48,7 @@ func (app *App) HandleError(handler func(ctx *fasthttp.RequestCtx) error) func(c
 	return func(ctx *fasthttp.RequestCtx) {
 		err := handler(ctx)
 		if err != nil {
-			fmt.Fprintf(ctx, "Error: %v\n", err)
+			ctx.SetBodyString(fmt.Sprintf("Error: %v\n", err))
 			ctx.SetStatusCode(500)
 		}
 	}

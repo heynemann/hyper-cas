@@ -131,7 +131,7 @@ func (st *FSStorage) StoreDistro(root string, hashes []string) error {
 	if err != nil {
 		return err
 	}
-	err = st.storeDistroFile(root)
+	err = st.storeDistroFile(root, hashes)
 	if err != nil {
 		return err
 	}
@@ -164,7 +164,7 @@ func (st *FSStorage) storeDistroLinks(dir, root string, hashes []string) error {
 	return nil
 }
 
-func (st *FSStorage) storeDistroFile(root string) error {
+func (st *FSStorage) storeDistroFile(root string, hashes []string) error {
 	filePath := path.Join(st.rootPath, "distros", root)
 	err := os.MkdirAll(path.Dir(filePath), os.ModePerm)
 	if err != nil {
@@ -178,7 +178,12 @@ func (st *FSStorage) storeDistroFile(root string) error {
 	}
 	defer lock.Unlock()
 
-	err = ioutil.WriteFile(filePath, []byte(""), 0644)
+	contents, err := json.Marshal(hashes)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(filePath, contents, 0644)
 	if err != nil {
 		return err
 	}

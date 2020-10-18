@@ -60,6 +60,10 @@ func (handler *DistroHandler) handlePut(ctx *fasthttp.RequestCtx) error {
 
 func (handler *DistroHandler) handleGet(ctx *fasthttp.RequestCtx) error {
 	distro := ctx.UserValue("distro").(string)
+	if !handler.App.Storage.HasDistro(distro) {
+		ctx.SetStatusCode(404)
+		return nil
+	}
 	contents, err := handler.App.Storage.GetDistro(distro)
 	if err != nil {
 		return err
