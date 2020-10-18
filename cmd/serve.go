@@ -1,12 +1,13 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/vtex/hyper-cas/serve"
 	"github.com/vtex/hyper-cas/storage"
+	"github.com/vtex/hyper-cas/utils"
+	"go.uber.org/zap"
 )
 
 var servePort int
@@ -21,7 +22,10 @@ distributions.`,
 		storageType := storage.FileSystem
 		app, err := serve.NewApp(servePort, storageType)
 		if err != nil {
-			fmt.Printf("Starting hyper-cas storage API failed with: %v", err)
+			utils.LogError(
+				"Starting hyper-cas storage API failed",
+				zap.Error(err),
+			)
 			os.Exit(1)
 		}
 		app.ListenAndServe()

@@ -1,6 +1,9 @@
 .PHONY: serve route sync-simple build docs
 
 serve:
+		@go run main.go serve --debug --config hyper-cas.yaml
+
+serve-prod:
 		@go run main.go serve --config hyper-cas.yaml
 
 docker-serve: docker

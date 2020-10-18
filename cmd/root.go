@@ -1,14 +1,16 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/vtex/hyper-cas/utils"
+	"go.uber.org/zap"
 
 	"github.com/spf13/viper"
 )
 
+var rootDebug bool
 var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
@@ -28,7 +30,7 @@ distributions of that content that can be served.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		utils.LogError("Failed to run hyper-cas CLI.", zap.Error(err))
 		os.Exit(1)
 	}
 }
@@ -37,10 +39,15 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.hyper-cas.yaml)")
+	rootCmd.PersistentFlags().BoolVarP(&rootDebug, "debug", "d", false, "Run hyper-cas in debug mode")
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	if rootDebug {
+		utils.SetDebug()
+	}
+
 	viper.SetConfigType("yaml")
 
 	if cfgFile != "" {
@@ -54,6 +61,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		utils.LogInfo("Successfully loaded config file.", zap.String("configPath", viper.ConfigFileUsed()))
 	}
 }

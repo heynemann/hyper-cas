@@ -8,6 +8,8 @@ import (
 	"github.com/valyala/fasthttp"
 	"github.com/vtex/hyper-cas/sitebuilder"
 	"github.com/vtex/hyper-cas/storage"
+	"github.com/vtex/hyper-cas/utils"
+	"go.uber.org/zap"
 )
 
 type App struct {
@@ -33,11 +35,13 @@ func getSiteBuilder() (sitebuilder.SiteBuilder, error) {
 func NewApp(port int, storageType storage.StorageType) (*App, error) {
 	siteBuilder, err := getSiteBuilder()
 	if err != nil {
+		utils.LogError("Could not create site builder.", zap.Error(err))
 		return nil, err
 	}
 
 	storage, err := getStorage(storageType, siteBuilder)
 	if err != nil {
+		utils.LogError("Could not create storage.", zap.Error(err))
 		return nil, err
 	}
 
@@ -80,10 +84,14 @@ func (app *App) GetRouter() *router.Router {
 
 func (app *App) ListenAndServe() {
 	router := app.GetRouter()
-	fmt.Printf("Running hyper-cas API in http://0.0.0.0:%d...\n", app.Port)
+	logger := utils.LoggerWith(
+		zap.String("ip", "0.0.0.0"),
+		zap.Int("port", app.Port),
+	)
+	logger.Info("hyper-cas API running successfully.")
 	err := fasthttp.ListenAndServe(fmt.Sprintf(":%d", app.Port), router.Handler)
 	if err != nil {
-		fmt.Printf("Running hyper-cas API failed with %v", err)
+		logger.Error("Running hyper-cas API failed.", zap.Error(err))
 		os.Exit(1)
 	}
 }
