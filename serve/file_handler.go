@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/spf13/viper"
+	"github.com/valyala/fasthttp"
 	"github.com/vtex/hyper-cas/utils"
 )
 
@@ -19,7 +19,7 @@ func NewFileHandler(app *App) *FileHandler {
 	return &FileHandler{App: app}
 }
 
-func (handler *FileHandler) handlePut(ctx *routing.Context) error {
+func (handler *FileHandler) handlePut(ctx *fasthttp.RequestCtx) error {
 	value := ctx.Request.Body()
 	hash := utils.HashBytes(value)
 	strHash := fmt.Sprintf("%x", hash)
@@ -38,7 +38,7 @@ func (handler *FileHandler) handlePut(ctx *routing.Context) error {
 	return nil
 }
 
-func writeContents(ctx *routing.Context, contents []byte) error {
+func writeContents(ctx *fasthttp.RequestCtx, contents []byte) error {
 	gzipEnabled := strings.Contains(string(ctx.Request.Header.Peek("Accept-Encoding")), "gzip")
 	ctx.Response.Header.Add("content-type", "text/html; charset=utf-8")
 	ctx.Response.Header.Add("date", time.Now().Format("RFC1123"))
@@ -57,8 +57,8 @@ func writeContents(ctx *routing.Context, contents []byte) error {
 	return nil
 }
 
-func (handler *FileHandler) handleGet(ctx *routing.Context) error {
-	hash := ctx.Param("hash")
+func (handler *FileHandler) handleGet(ctx *fasthttp.RequestCtx) error {
+	hash := ctx.UserValue("hash").(string)
 	contents, err := handler.App.Storage.Get(hash)
 	if err != nil {
 		return err
@@ -66,8 +66,8 @@ func (handler *FileHandler) handleGet(ctx *routing.Context) error {
 	return writeContents(ctx, contents)
 }
 
-func (handler *FileHandler) handleHead(ctx *routing.Context) error {
-	hash := ctx.Param("hash")
+func (handler *FileHandler) handleHead(ctx *fasthttp.RequestCtx) error {
+	hash := ctx.UserValue("hash").(string)
 	if has := handler.App.Storage.Has(hash); has {
 		ctx.SetStatusCode(200)
 	} else {

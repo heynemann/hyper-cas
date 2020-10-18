@@ -23,6 +23,8 @@ type FSStorage struct {
 }
 
 func NewFSStorage(siteBuilder sitebuilder.SiteBuilder) (*FSStorage, error) {
+	viper.SetDefault("storage.rootPath", "/tmp/hyper-cas/storage")
+	viper.SetDefault("storage.sitesPath", "/tmp/hyper-cas/sites")
 	rootPath := viper.GetString("storage.rootPath")
 	sitesPath := viper.GetString("storage.sitesPath")
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	routing "github.com/qiangxue/fasthttp-routing"
+	router "github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
 	"github.com/vtex/hyper-cas/sitebuilder"
 	"github.com/vtex/hyper-cas/storage"
@@ -44,26 +44,39 @@ func NewApp(port int, storageType storage.StorageType) (*App, error) {
 	return &App{Port: port, Storage: storage, SiteBuilder: siteBuilder}, nil
 }
 
+func (app *App) HandleError(handler func(ctx *fasthttp.RequestCtx) error) func(ctx *fasthttp.RequestCtx) {
+	return func(ctx *fasthttp.RequestCtx) {
+		err := handler(ctx)
+		if err != nil {
+			fmt.Fprintf(ctx, "Error: %v\n", err)
+			ctx.SetStatusCode(500)
+		}
+	}
+}
+
 func (app *App) ListenAndServe() {
-	router := routing.New()
+	router := router.New()
+	healthcheckHandler := NewHealthcheckHandler(app)
 	fileHandler := NewFileHandler(app)
 	distroHandler := NewDistroHandler(app)
 	labelHandler := NewLabelHandler(app)
 
-	router.Put("/file", fileHandler.handlePut)
-	router.Get("/file/<hash>", fileHandler.handleGet)
-	router.Head("/file/<hash>", fileHandler.handleHead)
+	router.GET("/healthcheck", app.HandleError(healthcheckHandler.handleGet))
 
-	router.Put("/distro", distroHandler.handlePut)
-	router.Get("/distro/<distro>", distroHandler.handleGet)
-	router.Head("/distro/<distro>", distroHandler.handleHead)
+	router.PUT("/file", app.HandleError(fileHandler.handlePut))
+	router.GET("/file/<hash>", app.HandleError(fileHandler.handleGet))
+	router.HEAD("/file/<hash>", app.HandleError(fileHandler.handleHead))
 
-	router.Put("/label", labelHandler.handlePut)
-	router.Get("/label/<label>", labelHandler.handleGet)
-	router.Head("/label/<label>", labelHandler.handleHead)
+	router.PUT("/distro", app.HandleError(distroHandler.handlePut))
+	router.GET("/distro/<distro>", app.HandleError(distroHandler.handleGet))
+	router.HEAD("/distro/<distro>", app.HandleError(distroHandler.handleHead))
+
+	router.PUT("/label", app.HandleError(labelHandler.handlePut))
+	router.GET("/label/<label>", app.HandleError(labelHandler.handleGet))
+	router.HEAD("/label/<label>", app.HandleError(labelHandler.handleHead))
 
 	fmt.Printf("Running hyper-cas API in http://0.0.0.0:%d...\n", app.Port)
-	err := fasthttp.ListenAndServe(fmt.Sprintf(":%d", app.Port), router.HandleRequest)
+	err := fasthttp.ListenAndServe(fmt.Sprintf(":%d", app.Port), router.Handler)
 	if err != nil {
 		fmt.Printf("Running hyper-cas API failed with %v", err)
 		os.Exit(1)

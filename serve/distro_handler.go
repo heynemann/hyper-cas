@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	routing "github.com/qiangxue/fasthttp-routing"
+	"github.com/valyala/fasthttp"
 	"github.com/vtex/hyper-cas/content"
 )
 
@@ -19,7 +19,7 @@ func NewDistroHandler(app *App) *DistroHandler {
 	return &DistroHandler{App: app}
 }
 
-func (handler *DistroHandler) handlePut(ctx *routing.Context) error {
+func (handler *DistroHandler) handlePut(ctx *fasthttp.RequestCtx) error {
 	value := ctx.Request.Body()
 	scanner := bufio.NewScanner(bytes.NewReader(value))
 
@@ -58,8 +58,8 @@ func (handler *DistroHandler) handlePut(ctx *routing.Context) error {
 	return nil
 }
 
-func (handler *DistroHandler) handleGet(ctx *routing.Context) error {
-	distro := ctx.Param("distro")
+func (handler *DistroHandler) handleGet(ctx *fasthttp.RequestCtx) error {
+	distro := ctx.UserValue("distro").(string)
 	contents, err := handler.App.Storage.GetDistro(distro)
 	if err != nil {
 		return err
@@ -72,8 +72,8 @@ func (handler *DistroHandler) handleGet(ctx *routing.Context) error {
 	return nil
 }
 
-func (handler *DistroHandler) handleHead(ctx *routing.Context) error {
-	distro := ctx.Param("distro")
+func (handler *DistroHandler) handleHead(ctx *fasthttp.RequestCtx) error {
+	distro := ctx.UserValue("distro").(string)
 	if handler.App.Storage.HasDistro(distro) {
 		ctx.SetStatusCode(200)
 	} else {

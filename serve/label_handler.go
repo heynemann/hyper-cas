@@ -3,7 +3,7 @@ package serve
 import (
 	"fmt"
 
-	routing "github.com/qiangxue/fasthttp-routing"
+	"github.com/valyala/fasthttp"
 )
 
 type LabelHandler struct {
@@ -14,7 +14,7 @@ func NewLabelHandler(app *App) *LabelHandler {
 	return &LabelHandler{App: app}
 }
 
-func (handler *LabelHandler) handlePut(ctx *routing.Context) error {
+func (handler *LabelHandler) handlePut(ctx *fasthttp.RequestCtx) error {
 	label := string(ctx.FormValue("label"))
 	hash := string(ctx.FormValue("hash"))
 	if label == "" || hash == "" {
@@ -27,8 +27,8 @@ func (handler *LabelHandler) handlePut(ctx *routing.Context) error {
 	return nil
 }
 
-func (handler *LabelHandler) handleGet(ctx *routing.Context) error {
-	label := ctx.Param("label")
+func (handler *LabelHandler) handleGet(ctx *fasthttp.RequestCtx) error {
+	label := ctx.UserValue("label").(string)
 	contents, err := handler.App.Storage.GetLabel(label)
 	if err != nil {
 		return err
@@ -37,8 +37,8 @@ func (handler *LabelHandler) handleGet(ctx *routing.Context) error {
 	return nil
 }
 
-func (handler *LabelHandler) handleHead(ctx *routing.Context) error {
-	label := ctx.Param("label")
+func (handler *LabelHandler) handleHead(ctx *fasthttp.RequestCtx) error {
+	label := ctx.UserValue("label").(string)
 	if has := handler.App.Storage.HasLabel(label); has {
 		ctx.SetStatusCode(200)
 	} else {
