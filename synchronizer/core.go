@@ -120,13 +120,17 @@ func (s *Sync) UploadDistro(hashes map[string]string) (string, error) {
 	return body, nil
 }
 
+func (s *Sync) HasDistro(hash string) bool {
+	status, _ := s.doReq("HEAD", fmt.Sprintf("/distro/%s", hash), "")
+	return status == 200
+}
+
 func (s *Sync) SetLabel(label, hash string) error {
 	status, body := s.doReq("PUT", "/label", fmt.Sprintf("label=%s&hash=%s", label, hash))
 	if status != 200 {
 		return fmt.Errorf("Failed to put new distro. Status: %d Error: %s", status, body)
 	}
 	return nil
-
 }
 
 func (s *Sync) Run(label string) (map[string]interface{}, error) {

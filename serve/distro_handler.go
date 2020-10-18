@@ -74,7 +74,7 @@ func (handler *DistroHandler) handleGet(ctx *routing.Context) error {
 
 func (handler *DistroHandler) handleHead(ctx *routing.Context) error {
 	distro := ctx.Param("distro")
-	if has := handler.App.Storage.HasLabel(distro); has {
+	if handler.App.Storage.HasDistro(distro) {
 		ctx.SetStatusCode(200)
 	} else {
 		ctx.SetStatusCode(404)

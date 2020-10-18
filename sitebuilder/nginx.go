@@ -16,13 +16,29 @@ type NginxSiteBuilder struct {
 
 func (sb *NginxSiteBuilder) Generate(label, root string) (string, error) {
 	serverName := fmt.Sprintf("%s.%s", label, sb.serverName)
+	useBrotli := viper.GetBool("useBrotli")
+
+	brotli := ""
+	if useBrotli {
+		brotli = `
+	# brotli
+	brotli on;
+	brotli_comp_level 6;
+	brotli_types text/xml image/svg+xml application/x-font-ttf image/vnd.microsoft.icon application/x-font-opentype application/json font/eot application/vnd.ms-fontobject application/javascript font/otf application/xml application/xhtml+xml text/javascript  application/x-javascript text/plain application/x-font-truetype application/xml+rss image/x-icon font/opentype text/css image/x-win-bitmap;`
+	}
 
 	data := struct {
+		Label      string
+		Hash       string
 		RootPath   string
 		ServerName string
+		Brotli     string
 	}{
+		Label:      label,
+		Hash:       root,
 		RootPath:   fmt.Sprintf("/app/sites/%s", root),
 		ServerName: serverName,
+		Brotli:     brotli,
 	}
 
 	var tpl bytes.Buffer
@@ -39,17 +55,16 @@ server {
 	root {{.RootPath}};
 	index index.html index.htm;
 	server_name {{.ServerName}};
+	add_header Hyper-Cas-Label {{.Label}};
+	add_header Hyper-Cas-Hash {{.Hash}};
+	add_header Vary Hyper-Cas-Hash;
 	
 	gzip on;
 	gzip_vary on;
 	gzip_proxied any;
 	gzip_comp_level 6;
 	gzip_types text/plain text/css text/xml application/json application/javascript application/xml+rss application/atom+xml image/svg+xml;
-
-	# brotli
-	# brotli on;
-	# brotli_comp_level 6;
-	# brotli_types text/xml image/svg+xml application/x-font-ttf image/vnd.microsoft.icon application/x-font-opentype application/json font/eot application/vnd.ms-fontobject application/javascript font/otf application/xml application/xhtml+xml text/javascript  application/x-javascript text/plain application/x-font-truetype application/xml+rss image/x-icon font/opentype text/css image/x-win-bitmap;
+	{{.Brotli}}
 
     location / {
         try_files $uri $uri/ /index.html;
@@ -65,6 +80,7 @@ server {
 }
 
 func NewNginxSiteBuilder() (*NginxSiteBuilder, error) {
+	viper.SetDefault("useBrotli", false)
 	sitesPath := viper.GetString("storage.sitesPath")
 	serverName := viper.GetString("nginx.serverName")
 	tmpl, err := getConfTemplate()
