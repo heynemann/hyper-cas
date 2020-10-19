@@ -5,4 +5,5 @@ nav:
   - Usage: usage.md
   - API: api.md
   - CLI: cli.md
+  - Configuration: config.md
   - Hacking: hacking.md
