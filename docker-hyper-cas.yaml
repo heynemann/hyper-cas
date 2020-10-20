@@ -2,7 +2,6 @@ storage:
   rootPath: /app/storage
   sitesPath: /app/sites
 
-gzipSourceFiles: false
-
 nginx:
   serverName: hyper-cas.org
+  useBrotli: false

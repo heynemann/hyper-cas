@@ -16,7 +16,7 @@ type NginxSiteBuilder struct {
 
 func (sb *NginxSiteBuilder) Generate(label, root string) (string, error) {
 	serverName := fmt.Sprintf("%s.%s", label, sb.serverName)
-	useBrotli := viper.GetBool("useBrotli")
+	useBrotli := viper.GetBool("nginx.useBrotli")
 
 	brotli := ""
 	if useBrotli {

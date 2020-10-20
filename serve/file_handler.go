@@ -3,7 +3,6 @@ package serve
 import (
 	"fmt"
 
-	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 	"github.com/vtex/hyper-cas/utils"
 	"go.uber.org/zap"
@@ -14,7 +13,6 @@ type FileHandler struct {
 }
 
 func NewFileHandler(app *App) *FileHandler {
-	viper.SetDefault("gzipSourceFiles", false)
 	return &FileHandler{App: app}
 }
 
@@ -22,14 +20,6 @@ func (handler *FileHandler) handlePut(ctx *fasthttp.RequestCtx) error {
 	value := ctx.Request.Body()
 	hash := utils.HashBytes(value)
 	strHash := fmt.Sprintf("%x", hash)
-	if viper.GetBool("gzipSourceFiles") {
-		var err error
-		value, err = utils.Zip(value)
-		if err != nil {
-			utils.LogError("Failed to zip source file.", zap.Error(err))
-			return err
-		}
-	}
 	err := handler.App.Storage.Store(strHash, value)
 	if err != nil {
 		utils.LogError("Failed to store file.", zap.ByteString("hash", hash), zap.Error(err))

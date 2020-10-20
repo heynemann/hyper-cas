@@ -2,8 +2,6 @@ storage:
   rootPath: /tmp/hyper-cas/storage
   sitesPath: /tmp/hyper-cas/sites
 
-gzipSourceFiles: false
-useBrotli: false
-
 nginx:
   serverName: hyper-cas.org
+  useBrotli: false
