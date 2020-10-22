@@ -62,6 +62,10 @@ func TestLabelHandlerGet(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, status, 200)
 	assert.Equal(t, hash, body)
+	labelPath := path.Join(viper.GetString("storage.rootPath"), "labels", label)
+	dat, err := ioutil.ReadFile(labelPath)
+	assert.NoError(t, err)
+	assert.Equal(t, hash, string(dat))
 }
 
 func TestLabelHandlerGetNotFound(t *testing.T) {

@@ -9,9 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/juju/fslock"
 	"github.com/spf13/viper"
 	"github.com/vtex/hyper-cas/sitebuilder"
 	"github.com/vtex/hyper-cas/utils"
@@ -75,12 +73,8 @@ func (st *FSStorage) Store(hash string, value []byte) error {
 		return err
 	}
 
-	lock := fslock.New(filePath)
-	err = lock.LockWithTimeout(time.Millisecond * 100)
-	if err != nil {
-		return err
-	}
-	defer lock.Unlock()
+	unlock, err := utils.Lock(filePath)
+	defer unlock()
 
 	err = ioutil.WriteFile(filePath, []byte(value), 0644)
 	if err != nil {
@@ -95,12 +89,8 @@ func (st *FSStorage) Get(hash string) ([]byte, error) {
 	if !utils.FileExists(filePath) {
 		return nil, fmt.Errorf("File %s was not found!", filePath)
 	}
-	lock := fslock.New(filePath)
-	err := lock.LockWithTimeout(time.Millisecond * 100)
-	if err != nil {
-		return nil, err
-	}
-	defer lock.Unlock()
+	unlock, err := utils.Lock(filePath)
+	defer unlock()
 
 	dat, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -171,12 +161,8 @@ func (st *FSStorage) storeDistroFile(root string, hashes []string) error {
 		return err
 	}
 
-	lock := fslock.New(filePath)
-	err = lock.LockWithTimeout(time.Millisecond * 100)
-	if err != nil {
-		return err
-	}
-	defer lock.Unlock()
+	unlock, err := utils.Lock(filePath)
+	defer unlock()
 
 	contents, err := json.Marshal(hashes)
 	if err != nil {
@@ -192,12 +178,8 @@ func (st *FSStorage) storeDistroFile(root string, hashes []string) error {
 
 func (st *FSStorage) GetDistro(root string) ([]string, error) {
 	filePath := path.Join(st.rootPath, "distros", root)
-	lock := fslock.New(filePath)
-	err := lock.LockWithTimeout(time.Millisecond * 100)
-	if err != nil {
-		return nil, err
-	}
-	defer lock.Unlock()
+	unlock, err := utils.Lock(filePath)
+	defer unlock()
 
 	dat, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -238,12 +220,8 @@ func (st *FSStorage) storeLabelFile(label, hash string) error {
 		return err
 	}
 
-	lock := fslock.New(filePath)
-	err = lock.LockWithTimeout(time.Millisecond * 100)
-	if err != nil {
-		return err
-	}
-	defer lock.Unlock()
+	unlock, err := utils.Lock(filePath)
+	defer unlock()
 
 	return ioutil.WriteFile(filePath, []byte(hash), 0644)
 }
@@ -255,24 +233,16 @@ func (st *FSStorage) storeLabelConf(label, hash string) error {
 	}
 
 	confPath := path.Join(st.sitesPath, fmt.Sprintf("%s.conf", label))
-	lock := fslock.New(confPath)
-	err = lock.LockWithTimeout(time.Millisecond * 100)
-	if err != nil {
-		return err
-	}
-	defer lock.Unlock()
+	unlock, err := utils.Lock(confPath)
+	defer unlock()
 
 	return ioutil.WriteFile(confPath, []byte(conf), 0644)
 }
 
 func (st *FSStorage) GetLabel(label string) (string, error) {
 	filePath := path.Join(st.rootPath, "labels", label)
-	lock := fslock.New(filePath)
-	err := lock.LockWithTimeout(time.Millisecond * 100)
-	if err != nil {
-		return "", err
-	}
-	defer lock.Unlock()
+	unlock, err := utils.Lock(filePath)
+	defer unlock()
 
 	dat, err := ioutil.ReadFile(filePath)
 	if err != nil {
