@@ -5,3 +5,7 @@ storage:
 nginx:
   serverName: hyper-cas.org
   useBrotli: false
+
+file:
+  enableLocks: true
+  lockTimeoutMs: 100
