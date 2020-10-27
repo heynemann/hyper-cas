@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/vtex/hyper-cas/utils"
@@ -51,8 +52,13 @@ func initConfig() {
 	viper.SetConfigType("yaml")
 
 	if cfgFile != "" {
+		abspath, err := filepath.Abs(cfgFile)
+		if err != nil || !utils.FileExists(abspath) {
+			utils.LogError("Specified configuration file does not exist.", zap.String("cfgFile", cfgFile))
+			os.Exit(1)
+		}
 		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
+		viper.SetConfigFile(abspath)
 	} else {
 		viper.SetConfigName("hyper-cas.yaml")
 	}
