@@ -12,8 +12,12 @@ import (
 
 var syncLabel string
 var syncURL string
-var syncJson bool
+var syncJSON bool
 var syncRetries int
+var syncRequestRetries int
+var syncMaxConcurrentRequests int
+var syncHTTPTimeoutMs int
+var syncDistroHTTPTimeoutMs int
 
 func folderExists(path string) bool {
 	info, err := os.Stat(path)
@@ -40,7 +44,14 @@ var syncCmd = &cobra.Command{
 		if !folderExists(folder) {
 			panic(fmt.Sprintf("Folder %s does not exist!", folder))
 		}
-		s := synchronizer.NewSync(folder, syncURL)
+		s := synchronizer.NewSync(
+			folder,
+			syncURL,
+			syncRequestRetries,
+			syncMaxConcurrentRequests,
+			syncHTTPTimeoutMs,
+			syncDistroHTTPTimeoutMs,
+		)
 		var result map[string]interface{}
 		retries := 0
 		for i := 0; i <= syncRetries; i++ {
@@ -48,13 +59,13 @@ var syncCmd = &cobra.Command{
 			if err == nil {
 				break
 			}
-			retries += 1
+			retries++
 		}
 		if result == nil {
 			panic(fmt.Errorf("Failed to synchronize folder: %v", err))
 		}
 		result["retries"] = retries
-		if syncJson {
+		if syncJSON {
 			res, err := json.Marshal(result)
 			if err != nil {
 				panic(err)
@@ -70,17 +81,21 @@ func init() {
 	rootCmd.AddCommand(syncCmd)
 	syncCmd.Flags().StringVarP(&syncLabel, "label", "l", "", "Label to apply to this new distribution")
 	syncCmd.Flags().StringVarP(&syncURL, "api-url", "u", "http://localhost:2485/", "Hyper-CAS API URL")
-	syncCmd.Flags().BoolVarP(&syncJson, "json", "j", false, "Whether to output JSON serialization")
-	syncCmd.Flags().IntVarP(&syncRetries, "retries", "r", 3, "Number of times to retry synchronizing")
+	syncCmd.Flags().BoolVarP(&syncJSON, "json", "j", false, "Whether to output JSON serialization")
+	syncCmd.Flags().IntVarP(&syncRetries, "retries", "r", 0, "Number of times to retry the whole synchronizing process")
+	syncCmd.Flags().IntVarP(&syncRequestRetries, "req-retries", "q", 0, "Number of times to retry each request to hyper-cas")
+	syncCmd.Flags().IntVarP(&syncMaxConcurrentRequests, "max-concurrent", "m", 50, "Maximum number of concurrent requests to hyper-cas")
+	syncCmd.Flags().IntVarP(&syncHTTPTimeoutMs, "timeout", "t", 5000, "Number of milliseconds to timeout per request to hyper-cas")
+	syncCmd.Flags().IntVarP(&syncDistroHTTPTimeoutMs, "distro-timeout", "o", 300000, "Number of milliseconds to timeout when writing the distro to hyper-cas")
 }
 
 func printResult(result map[string]interface{}) {
 	fmt.Printf("Completed synchronizing with %d retries.\n", result["retries"].(int))
 	for _, file := range result["files"].([]map[string]interface{}) {
-		isUpToDate := file["upToDate"].(bool)
+		alreadyExists := file["exists"].(bool)
 		path := file["path"].(string)
-		if isUpToDate {
-			fmt.Printf("* %s - Already up-to-date.\n", path)
+		if alreadyExists {
+			fmt.Printf("* %s - Already exists.\n", path)
 		} else {
 			fmt.Printf("* %s - Updated (hash: %s).\n", path, file["hash"].(string))
 		}

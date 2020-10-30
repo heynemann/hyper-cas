@@ -5,22 +5,23 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/viper"
 	"github.com/vtex/hyper-cas/sitebuilder"
 	"github.com/vtex/hyper-cas/utils"
+	"go.uber.org/zap"
 )
 
+// FSStorage for keeping all the CAS data in the filesystem
 type FSStorage struct {
 	rootPath    string
 	sitesPath   string
 	siteBuilder sitebuilder.SiteBuilder
 }
 
+// NewFSStorage with the specified settings
 func NewFSStorage(siteBuilder sitebuilder.SiteBuilder) (*FSStorage, error) {
 	viper.SetDefault("storage.rootPath", "/tmp/hyper-cas/storage")
 	viper.SetDefault("storage.sitesPath", "/tmp/hyper-cas/sites")
@@ -44,18 +45,33 @@ func NewFSStorage(siteBuilder sitebuilder.SiteBuilder) (*FSStorage, error) {
 }
 
 func symlink(filePath, symlinkPath string) error {
-	fileRelPath, err := filepath.Rel(path.Dir(symlinkPath), filePath)
-	if err != nil {
-		return fmt.Errorf("Failed to find relative path between %s and %s: %v", path.Dir(filePath), symlinkPath, err)
-	}
-
-	cmd := exec.Command("ln", "-sf", fileRelPath, path.Base(symlinkPath))
-	cmd.Dir = path.Dir(symlinkPath)
-	_, err = cmd.CombinedOutput()
-	if err != nil {
+	symlinkPathTmp := symlinkPath + ".tmp"
+	logger := utils.LoggerWith(
+		zap.String("filePath", filePath),
+		zap.String("symlinkPath", symlinkPath),
+	)
+	if err := os.Remove(symlinkPathTmp); err != nil && !os.IsNotExist(err) {
+		logger.Error("failed to remove previous symlink", zap.Error(err))
 		return err
 	}
 
+	if err := os.Symlink(filePath, symlinkPathTmp); err != nil {
+		logger.Error(
+			"failed to create temporary symlink",
+			zap.String("tempSymlink", symlinkPathTmp),
+			zap.Error(err),
+		)
+		return err
+	}
+
+	if err := os.Rename(symlinkPathTmp, symlinkPath); err != nil {
+		logger.Error(
+			"failed to move temporary symlink to symlink",
+			zap.String("tempSymlink", symlinkPathTmp),
+			zap.Error(err),
+		)
+		return err
+	}
 	return nil
 }
 
@@ -64,6 +80,7 @@ func (st *FSStorage) filePath(hash string) string {
 	return path.Join(fileDir, hash)
 }
 
+// Store files in the filesystem
 func (st *FSStorage) Store(hash string, value []byte) error {
 	fileDir := path.Join(st.rootPath, "files", hash[0:2], hash[2:4])
 	filePath := path.Join(fileDir, hash)
@@ -84,10 +101,11 @@ func (st *FSStorage) Store(hash string, value []byte) error {
 	return nil
 }
 
+// Get a file from the filesystem
 func (st *FSStorage) Get(hash string) ([]byte, error) {
 	filePath := path.Join(st.rootPath, "files", hash[0:2], hash[2:4], hash)
 	if !utils.FileExists(filePath) {
-		return nil, fmt.Errorf("File %s was not found!", filePath)
+		return nil, fmt.Errorf("file %s was not found", filePath)
 	}
 	unlock, err := utils.Lock(filePath)
 	defer unlock()
@@ -100,6 +118,7 @@ func (st *FSStorage) Get(hash string) ([]byte, error) {
 	return dat, nil
 }
 
+// Has the file in the filesystem?
 func (st *FSStorage) Has(hash string) bool {
 	filePath := path.Join(st.rootPath, "files", hash[0:2], hash[2:4], hash)
 	return utils.FileExists(filePath)
@@ -110,8 +129,9 @@ func splitFile(hash string) (string, string) {
 	return v[0], v[1]
 }
 
+// StoreDistro in the filesytem
 func (st *FSStorage) StoreDistro(root string, hashes []string) error {
-	dir := path.Join(st.sitesPath, fmt.Sprintf("temp%s", root))
+	dir := path.Join(st.sitesPath, fmt.Sprintf("%s%s", utils.RandString(32), root))
 	defer func() {
 		if utils.DirExists(dir) {
 			os.RemoveAll(dir)
@@ -129,6 +149,11 @@ func (st *FSStorage) StoreDistro(root string, hashes []string) error {
 	finalPath := path.Join(st.sitesPath, root)
 	err = os.Rename(dir, finalPath)
 	if err != nil {
+		sErr, ok := err.(*os.LinkError)
+		if ok && sErr.Op == "rename" {
+			utils.LogWarn("Distribution path already exist. Ignoring rename...", zap.Error(err), zap.String("path", finalPath))
+			return nil
+		}
 		return err
 	}
 
@@ -176,6 +201,7 @@ func (st *FSStorage) storeDistroFile(root string, hashes []string) error {
 	return nil
 }
 
+// GetDistro from the filesystem
 func (st *FSStorage) GetDistro(root string) ([]string, error) {
 	filePath := path.Join(st.rootPath, "distros", root)
 	unlock, err := utils.Lock(filePath)
@@ -195,11 +221,13 @@ func (st *FSStorage) GetDistro(root string) ([]string, error) {
 	return contents, nil
 }
 
+// HasDistro in the filesystem?
 func (st *FSStorage) HasDistro(root string) bool {
 	filePath := path.Join(st.rootPath, "distros", root)
 	return utils.FileExists(filePath)
 }
 
+// StoreLabel in the filesystem
 func (st *FSStorage) StoreLabel(label, hash string) error {
 	err := st.storeLabelFile(label, hash)
 	if err != nil {
@@ -239,6 +267,7 @@ func (st *FSStorage) storeLabelConf(label, hash string) error {
 	return ioutil.WriteFile(confPath, []byte(conf), 0644)
 }
 
+// GetLabel from the filesystem
 func (st *FSStorage) GetLabel(label string) (string, error) {
 	filePath := path.Join(st.rootPath, "labels", label)
 	unlock, err := utils.Lock(filePath)
@@ -252,6 +281,7 @@ func (st *FSStorage) GetLabel(label string) (string, error) {
 	return string(dat), nil
 }
 
+// HasLabel in the filesystem?
 func (st *FSStorage) HasLabel(label string) bool {
 	filePath := path.Join(st.rootPath, "labels", label)
 	return utils.FileExists(filePath)
