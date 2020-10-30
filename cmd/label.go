@@ -20,7 +20,7 @@ var labelCmd = &cobra.Command{
 	Long:  `set-label will set the specified label to the specified tree hash in hyper-cas`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
-		s := synchronizer.NewSync("", labelURL)
+		s := synchronizer.NewSync("", labelURL, 0, 1, 5000, 300000)
 		retries := 0
 		for i := 0; i <= labelRetries; i++ {
 			hasDistro := s.HasDistro(labelHash)
@@ -31,7 +31,7 @@ var labelCmd = &cobra.Command{
 			if err == nil {
 				break
 			}
-			retries += 1
+			retries++
 		}
 		if retries > labelRetries {
 			log.Fatalf("Distribution %s could not be set to label %s: %v\n", labelHash, labelName, err)

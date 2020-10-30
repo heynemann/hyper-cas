@@ -5,6 +5,7 @@ import (
 	"os"
 
 	router "github.com/fasthttp/router"
+	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 	"github.com/vtex/hyper-cas/sitebuilder"
 	"github.com/vtex/hyper-cas/storage"
@@ -33,6 +34,9 @@ func getSiteBuilder() (sitebuilder.SiteBuilder, error) {
 }
 
 func NewApp(port int, storageType storage.StorageType) (*App, error) {
+	viper.SetDefault("serve.maxRequestBodySize", 4*1024*1024*1024)
+	viper.SetDefault("serve.TCPKeepaliveEnabled", true)
+
 	siteBuilder, err := getSiteBuilder()
 	if err != nil {
 		utils.LogError("Could not create site builder.", zap.Error(err))
@@ -89,7 +93,17 @@ func (app *App) ListenAndServe() {
 		zap.Int("port", app.Port),
 	)
 	logger.Info("hyper-cas API running successfully.")
-	err := fasthttp.ListenAndServe(fmt.Sprintf(":%d", app.Port), router.Handler)
+	s := &fasthttp.Server{
+		Handler: router.Handler,
+		Name:    "hyper-cas",
+
+		MaxRequestBodySize: viper.GetInt("serve.maxRequestBodySize"),
+		DisableKeepalive:   false,
+		TCPKeepalive:       viper.GetBool("serve.TCPKeepaliveEnabled"),
+	}
+	err := s.ListenAndServe(
+		fmt.Sprintf(":%d", app.Port),
+	)
 	if err != nil {
 		logger.Error("Running hyper-cas API failed.", zap.Error(err))
 		os.Exit(1)

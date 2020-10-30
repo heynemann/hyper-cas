@@ -22,11 +22,11 @@ func (handler *FileHandler) handlePut(ctx *fasthttp.RequestCtx) error {
 	strHash := fmt.Sprintf("%x", hash)
 	err := handler.App.Storage.Store(strHash, value)
 	if err != nil {
-		utils.LogError("Failed to store file.", zap.ByteString("hash", hash), zap.Error(err))
+		utils.LogError("Failed to store file.", zap.String("hash", fmt.Sprintf("%x", hash)), zap.Error(err))
 		return err
 	}
 	ctx.SetBodyString(strHash)
-	utils.LogInfo("Successfully stored file.", zap.ByteString("hash", hash))
+	utils.LogInfo("Successfully stored file.", zap.String("hash", fmt.Sprintf("%x", hash)))
 	return nil
 }
 
