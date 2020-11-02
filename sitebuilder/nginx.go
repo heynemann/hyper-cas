@@ -58,7 +58,8 @@ server {
 	add_header Hyper-Cas-Label {{.Label}};
 	add_header Hyper-Cas-Hash {{.Hash}};
 	add_header Vary Hyper-Cas-Hash;
-	
+	add_header Set-Cookie VtexStoreVersion=v2;
+
 	gzip on;
 	gzip_vary on;
 	gzip_proxied any;
