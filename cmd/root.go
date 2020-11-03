@@ -39,7 +39,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.hyper-cas.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.hyper-cas/config.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&rootDebug, "debug", "d", false, "Run hyper-cas in debug mode")
 }
 
@@ -60,7 +60,13 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(abspath)
 	} else {
-		viper.SetConfigName("hyper-cas.yaml")
+		home, err := os.UserHomeDir()
+		if err != nil {
+			utils.LogError("Unable to locate current user's home dir.", zap.Error(err))
+			os.Exit(1)
+		}
+
+		viper.SetConfigFile(filepath.Join(home, ".hyper-cas/config.yaml"))
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
