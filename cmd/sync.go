@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/vtex/hyper-cas/synchronizer"
@@ -34,7 +35,7 @@ var syncCmd = &cobra.Command{
 			panic("There must be only a single argument specifying path to sync.")
 		}
 		var err error
-		folder := args[0]
+		folder := strings.TrimRight(args[0], "/")
 		if !filepath.IsAbs(folder) {
 			folder, err = filepath.Abs(folder)
 			if err != nil {
@@ -90,23 +91,28 @@ func init() {
 }
 
 func printResult(result map[string]interface{}) {
-	fmt.Printf("Completed synchronizing with %d retries.\n", result["retries"].(int))
-	for _, file := range result["files"].([]map[string]interface{}) {
-		alreadyExists := file["exists"].(bool)
+	updatedFiles := result["files"].([]map[string]interface{})
+	for _, file := range updatedFiles {
 		path := file["path"].(string)
-		if alreadyExists {
-			fmt.Printf("* %s - Already exists.\n", path)
+		if file["exists"] == true {
+			fmt.Printf("* %s - Already exists (%vms).\n", path, file["duration"])
 		} else {
-			fmt.Printf("* %s - Updated (hash: %s).\n", path, file["hash"].(string))
+			fmt.Printf("* %s - Updated (hash: %s - %vms).\n", path, file["hash"], file["duration"])
 		}
 	}
 
 	distro := result["distro"].(map[string]interface{})
-	fmt.Printf("* Distro %s is up-to-date.\n", distro["hash"].(string))
+	fmt.Printf("* Distribution - Updated (hash: %s - %vms).\n", distro["hash"], distro["duration"])
 
 	label := result["label"].(map[string]interface{})
-	labelName := label["label"].(string)
+	labelName := label["label"]
 	if labelName != "" {
-		fmt.Printf("* Updated label %s => %s.\n", labelName, label["hash"].(string))
+		fmt.Printf("* Updated label %s => %s.\n", labelName, label["hash"])
 	}
+	fmt.Printf(
+		"Completed synchronizing %v files with %v retries in %vms.\n",
+		len(updatedFiles),
+		result["retries"],
+		result["duration"],
+	)
 }
