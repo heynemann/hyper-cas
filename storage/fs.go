@@ -107,7 +107,19 @@ func (st *FSStorage) Get(hash string) ([]byte, error) {
 // Has the file in the filesystem?
 func (st *FSStorage) Has(hash string) bool {
 	filePath := path.Join(st.rootPath, "files", hash[0:2], hash[2:4], hash)
-	return utils.FileExists(filePath)
+	if !utils.FileExists(filePath) {
+		return false
+	}
+
+	dat, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return false
+	}
+
+	datHash := utils.HashBytes(dat)
+	datHashStr := fmt.Sprintf("%x", datHash)
+
+	return datHashStr == hash
 }
 
 func splitFile(hash string) (string, string) {
