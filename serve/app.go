@@ -7,6 +7,7 @@ import (
 	router "github.com/fasthttp/router"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttp/pprofhandler"
 	"github.com/vtex/hyper-cas/sitebuilder"
 	"github.com/vtex/hyper-cas/storage"
 	"github.com/vtex/hyper-cas/utils"
@@ -17,6 +18,7 @@ type App struct {
 	Port        int
 	Storage     storage.Storage
 	SiteBuilder sitebuilder.SiteBuilder
+	profile     bool
 }
 
 func getStorage(storageType storage.StorageType, siteBuilder sitebuilder.SiteBuilder) (storage.Storage, error) {
@@ -49,7 +51,11 @@ func NewApp(port int, storageType storage.StorageType) (*App, error) {
 		return nil, err
 	}
 
-	return &App{Port: port, Storage: storage, SiteBuilder: siteBuilder}, nil
+	return &App{Port: port, Storage: storage, SiteBuilder: siteBuilder, profile: false}, nil
+}
+
+func (app *App) EnableProfileRoutes(enabled bool) {
+	app.profile = enabled
 }
 
 func (app *App) HandleError(handler func(ctx *fasthttp.RequestCtx) error) func(ctx *fasthttp.RequestCtx) {
@@ -82,6 +88,12 @@ func (app *App) GetRouter() *router.Router {
 	router.PUT("/label", app.HandleError(labelHandler.handlePut))
 	router.GET("/label/{label}", app.HandleError(labelHandler.handleGet))
 	router.HEAD("/label/{label}", app.HandleError(labelHandler.handleHead))
+
+	if app.profile {
+		utils.LogDebug("Profiling routes enabled.")
+		router.GET("/debug/pprof/{name}", pprofhandler.PprofHandler)
+		router.GET("/debug/pprof/", pprofhandler.PprofHandler)
+	}
 
 	return router
 }

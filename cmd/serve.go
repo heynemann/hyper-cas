@@ -11,6 +11,7 @@ import (
 )
 
 var servePort int
+var profile bool
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
@@ -21,6 +22,7 @@ distributions.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		storageType := storage.FileSystem
 		app, err := serve.NewApp(servePort, storageType)
+		app.EnableProfileRoutes(profile)
 		if err != nil {
 			utils.LogError(
 				"Starting hyper-cas storage API failed",
@@ -44,4 +46,5 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	serveCmd.Flags().IntVarP(&servePort, "port", "p", 2485, "Port to run hyper-cas API in")
+	serveCmd.Flags().BoolVar(&profile, "profile", false, "Enable pprof debug routes")
 }
