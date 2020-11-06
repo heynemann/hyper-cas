@@ -26,7 +26,7 @@ func (handler *FileHandler) handlePut(ctx *fasthttp.RequestCtx) error {
 		return err
 	}
 	ctx.SetBodyString(strHash)
-	utils.LogInfo("Successfully stored file.", zap.String("hash", fmt.Sprintf("%x", hash)))
+	utils.LogDebug("Successfully stored file.", zap.String("hash", fmt.Sprintf("%x", hash)))
 	return nil
 }
 

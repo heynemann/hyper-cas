@@ -70,20 +70,32 @@ func (st *FSStorage) filePath(hash string) string {
 func (st *FSStorage) Store(hash string, value []byte) error {
 	fileDir := path.Join(st.rootPath, "files", hash[0:2], hash[2:4])
 	filePath := path.Join(fileDir, hash)
+	fileTemp := fmt.Sprintf("%s_%s", filePath, utils.RandString(16))
 
 	err := os.MkdirAll(fileDir, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	unlock, err := utils.Lock(filePath)
-	defer unlock()
-
-	err = ioutil.WriteFile(filePath, []byte(value), 0644)
+	err = ioutil.WriteFile(fileTemp, value, 0644)
 	if err != nil {
 		return err
 	}
 
+	unlock, err := utils.Lock(filePath)
+	if err != nil {
+		utils.LogError("failed to lock file", zap.Error(err))
+		os.Remove(fileTemp)
+		return err
+	}
+	defer unlock()
+
+	err = os.Rename(fileTemp, filePath)
+	if err != nil {
+		utils.LogError("failed to move file to proper path", zap.Error(err))
+		os.Remove(fileTemp)
+		return err
+	}
 	return nil
 }
 
