@@ -45,33 +45,19 @@ func NewFSStorage(siteBuilder sitebuilder.SiteBuilder) (*FSStorage, error) {
 }
 
 func symlink(filePath, symlinkPath string) error {
-	symlinkPathTmp := symlinkPath + ".tmp"
 	logger := utils.LoggerWith(
 		zap.String("filePath", filePath),
 		zap.String("symlinkPath", symlinkPath),
 	)
-	if err := os.Remove(symlinkPathTmp); err != nil && !os.IsNotExist(err) {
-		logger.Error("failed to remove previous symlink", zap.Error(err))
-		return err
-	}
 
-	if err := os.Symlink(filePath, symlinkPathTmp); err != nil {
+	if err := os.Symlink(filePath, symlinkPath); err != nil {
 		logger.Error(
-			"failed to create temporary symlink",
-			zap.String("tempSymlink", symlinkPathTmp),
+			"failed to create symlink",
 			zap.Error(err),
 		)
 		return err
 	}
 
-	if err := os.Rename(symlinkPathTmp, symlinkPath); err != nil {
-		logger.Error(
-			"failed to move temporary symlink to symlink",
-			zap.String("tempSymlink", symlinkPathTmp),
-			zap.Error(err),
-		)
-		return err
-	}
 	return nil
 }
 

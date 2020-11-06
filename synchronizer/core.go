@@ -33,9 +33,9 @@ type Sync struct {
 }
 
 // NewSync creates a Sync
-func NewSync(root, apiURL string, requestRetriesCount, maxConcurrentRequests, httpTimeoutMs, distroHttpTimeoutMs int) *Sync {
+func NewSync(root, apiURL string, requestRetriesCount, maxConcurrentRequests, httpTimeoutMs, distroHTTPTimeoutMs int) *Sync {
 	fileUploadClient := initHTTPClient(requestRetriesCount, maxConcurrentRequests, httpTimeoutMs)
-	metadataClient := initHTTPClient(requestRetriesCount, maxConcurrentRequests, distroHttpTimeoutMs)
+	metadataClient := initHTTPClient(requestRetriesCount, maxConcurrentRequests, distroHTTPTimeoutMs)
 	s := &Sync{
 		rootDir:               root,
 		apiURL:                apiURL,
@@ -54,6 +54,7 @@ type fileUpdateJob struct {
 type fileUpdateResponse struct {
 	path          string
 	hash          string
+	duration      time.Duration
 	alreadyExists bool
 }
 
@@ -137,7 +138,7 @@ func (s *Sync) worker() {
 			s.respChan <- nil
 			continue
 		}
-		hash, alreadyExists, err := s.uploadFile(filePath, content)
+		hash, alreadyExists, duration, err := s.uploadFile(filePath, content)
 		if err != nil {
 			logger.Error("failed to upload file.", zap.String("path", job.path), zap.Error(err))
 			s.respChan <- nil
@@ -146,6 +147,7 @@ func (s *Sync) worker() {
 		s.respChan <- &fileUpdateResponse{
 			path:          filePath,
 			hash:          hash,
+			duration:      duration,
 			alreadyExists: alreadyExists,
 		}
 	}
@@ -182,22 +184,24 @@ func (s *Sync) doReq(client *httpclient.Client, method, reqURL, body string, isU
 	return resp.StatusCode, string(respBody)
 }
 
-func (s *Sync) uploadFile(path, content string) (string, bool, error) {
+func (s *Sync) uploadFile(path, content string) (string, bool, time.Duration, error) {
 	hashBytes := utils.Hash(content)
 	hash := fmt.Sprintf("%x", hashBytes)
 	fileURL := fmt.Sprintf("/file/%s", hash)
+	start := time.Now()
 	status, _ := s.doReq(s.fileUploadClient, "HEAD", fileURL, "", false)
 	if status == 200 {
-		return hash, true, nil
+		return hash, true, time.Since(start), nil
 	}
 	status, body := s.doReq(s.fileUploadClient, "PUT", "/file", content, false)
 	if status != 200 {
-		return "", false, fmt.Errorf("failed to put %s. Status: %d Error: %s", path, status, body)
+		return "", false, time.Since(start), fmt.Errorf("failed to put %s. Status: %d Error: %s", path, status, body)
 	}
-	return body, false, nil
+	return body, false, time.Since(start), nil
 }
 
-func (s *Sync) uploadDistro(hashes map[string]string) (string, error) {
+func (s *Sync) uploadDistro(hashes map[string]string) (string, time.Duration, error) {
+	start := time.Now()
 	keys := make([]string, 0, len(hashes))
 	for key := range hashes {
 		keys = append(keys, key)
@@ -213,9 +217,9 @@ func (s *Sync) uploadDistro(hashes map[string]string) (string, error) {
 	content := sb.String()
 	status, body := s.doReq(s.metadataClient, "PUT", "/distro", content, false)
 	if status != 200 {
-		return "", fmt.Errorf("failed to put new distro. Status: %d Error: %s", status, body)
+		return "", time.Since(start), fmt.Errorf("failed to put new distro. Status: %d Error: %s", status, body)
 	}
-	return body, nil
+	return body, time.Since(start), nil
 }
 
 // HasDistro in hyper-cas with specified hash?
@@ -235,6 +239,7 @@ func (s *Sync) SetLabel(label, hash string) error {
 
 // Run the sync
 func (s *Sync) Run(label string) (map[string]interface{}, error) {
+	start := time.Now()
 	result := map[string]interface{}{
 		"timestamp": int32(time.Now().Unix()),
 		"files":     []map[string]interface{}{},
@@ -263,9 +268,10 @@ func (s *Sync) Run(label string) (map[string]interface{}, error) {
 		}
 		hashes[res.path] = res.hash
 		result["files"] = append(result["files"].([]map[string]interface{}), map[string]interface{}{
-			"path":   res.path,
-			"hash":   res.hash,
-			"exists": res.alreadyExists,
+			"path":     res.path,
+			"hash":     res.hash,
+			"exists":   res.alreadyExists,
+			"duration": res.duration.Milliseconds(),
 		})
 	}
 	utils.LogDebug("Hashes calculated.", zap.Int("hashes", len(hashes)))
@@ -278,13 +284,14 @@ func (s *Sync) Run(label string) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("failed to upload files to hyper-cas")
 	}
 
-	distro, err := s.uploadDistro(hashes)
+	distro, distroDuration, err := s.uploadDistro(hashes)
 	if err != nil {
 		utils.LogError("distro could not be updated.", zap.Error(err))
 		return nil, err
 	}
 	result["distro"] = map[string]interface{}{
-		"hash": distro,
+		"hash":     distro,
+		"duration": distroDuration.Milliseconds(),
 	}
 	utils.LogDebug("Distro updated successfully.", zap.String("distro", distro))
 	if label != "" {
@@ -300,6 +307,8 @@ func (s *Sync) Run(label string) (map[string]interface{}, error) {
 		}
 		utils.LogDebug("Label updated successfully.", zap.String("label", label), zap.String("distro", distro))
 	}
+
+	result["duration"] = time.Since(start).Milliseconds()
 
 	return result, nil
 }
