@@ -1,0 +1,33 @@
+---
+workspace:
+  base: /go
+  path: src/github.com/vtex/hyper-cas
+
+pipeline:
+  test:
+    image: golang:1.15
+    commands:
+      - go test -v -coverpkg=./... ./...
+
+  publish:
+    image: plugins/ecr
+    when:
+      event: tag
+    region: us-east-1
+    repo: 558830342743.dkr.ecr.us-east-1.amazonaws.com/hyper-cas
+    tag:
+      - ${DRONE_TAG}
+
+  notify-vtex-builds:
+    image: vtexlab/drone-webhook
+    when:
+      event: tag
+      status: [success]
+    urls:
+      - http://private-reliability.ingress.vtex.io/api/deploy
+    template: >
+      {
+        "system": "hyper-cas",
+        "key": "FASTSTORE_HYPER_CAS_VERSION",
+        "version": "${DRONE_TAG}"
+      }
