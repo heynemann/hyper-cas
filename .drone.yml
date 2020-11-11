@@ -1,0 +1,32 @@
+---
+workspace:
+  base: /go
+  path: src/github.com/vtex/hyper-cas
+
+pipeline:
+  test:
+    image: golang:1.15
+    commands:
+      - go test -v -coverpkg=./... ./...
+
+  slack:
+    image: plugins/slack
+    webhook: https://hooks.slack.com/services/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
+    template: "*{{Build.Status}}*: <{{Build.Link}}|{{Repo.Owner}}/{{Repo.Name}}> (${DRONE_TAG}) by {{Build.Author}}"
+    when:
+      event: tag
+      status: [success, failure]
+
+  notify-vtex-builds:
+    image: vtexlab/drone-webhook
+    when:
+      event: tag
+      status: [success]
+    urls:
+      - http://private-reliability.ingress.vtex.io/api/deploy
+    template: >
+      {
+        "system": "hyper-cas",
+        "key": "FASTSTORE_HYPER_CAS_VERSION",
+        "version": "${DRONE_TAG}"
+      }
