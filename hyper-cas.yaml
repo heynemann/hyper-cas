@@ -4,7 +4,7 @@ storage:
 
 nginx:
   serverName: hyper-cas.org
-  useBrotli: false
+  template: templates/default-server.conf
 
 file:
   enableLocks: true
